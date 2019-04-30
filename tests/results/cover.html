@@ -1,0 +1,1143 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">/home/lzuccarelli/Projects/portfolio-tracker/portfoliotracker-stocks-dbinterface/config.go (98.0%)</option>
+				
+				<option value="file1">/home/lzuccarelli/Projects/portfolio-tracker/portfoliotracker-stocks-dbinterface/handlers.go (50.9%)</option>
+				
+				<option value="file2">/home/lzuccarelli/Projects/portfolio-tracker/portfoliotracker-stocks-dbinterface/middleware.go (83.5%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "encoding/json"
+        "errors"
+        "fmt"
+        "io/ioutil"
+        "os"
+        "time"
+)
+
+/**
+ * The json config will always be in the form of parent.key:value pair
+ * the reasoning here is that it is easy to maintain and use
+ * and also if required can be migtrated to a key value store such as redis
+ *
+ * Don't dig it - then feel welcome to change it to your hearts content - knock yourself out
+ *
+ **/
+
+// Config structure - define the json format for our microservice config
+type Config struct {
+        Version  string `json:"version"`
+        Level    string `json:"level"`
+        Basedir  string `json:"base_dir"`
+        Port     string `json:"port"`
+        Cache    string `json:"cache"`
+        Url      string `json:"url"`
+        QuoteUrl string `json:"quoteurl"`
+        Token    string `json:"token"`
+        MongoDB  Mongodb
+        RedisDB  Redis
+}
+
+// Mongodb structure - the base config to connect to mongodb
+type Mongodb struct {
+        Host           string `json:"host"`
+        Port           string `json:"port"`
+        DatabaseName   string `json:"name"`
+        User           string `json:"user"`
+        Password       string `json:"pwd"`
+        AdminUser      string `json:"adminuser"`
+        AdminPasssword string `json:"adminpwd"`
+}
+
+type Redis struct {
+        Host string `json:"host"`
+        Port string `json:"port"`
+}
+
+// declare and set some vars and constants
+var start time.Time
+
+const (
+        timeformat string = "2006/01/02 03:04:05"
+        fmterror   string = "%s \x1b[1;31m[%s] \x1b[0m : %v \n"
+        fmtinfo    string = "%s \x1b[1;34m[%s] \x1b[0m  : %s \n"
+)
+
+// ReadFile - a utility function that reads the file
+// The design here also ensures our test coverage is high
+// It takes in a string and returns a byte array and error object
+func ReadFile(filename string) ([]byte, error) <span class="cov8" title="1">{
+        file, err := ioutil.ReadFile(filename)
+        if err != nil </span><span class="cov8" title="1">{
+                fmt.Printf(fmterror, start.Format(timeformat), "ERROR", err)
+                return file, err
+        }</span> else<span class="cov8" title="1"> {
+                return file, nil
+        }</span>
+}
+
+// ParseJson - a utility function that parses a byte array (json)
+// The design here also ensures our test coverage is high
+// i.e we dont have to run this multiple of times to increase coverage
+// It takes in a byte array returns both Config and error objects
+func ParseJson(b []byte) (Config, error) <span class="cov8" title="1">{
+        var cfg Config
+        err := json.Unmarshal(b, &amp;cfg)
+        if err != nil </span><span class="cov8" title="1">{
+                fmt.Printf(fmterror, start.Format(timeformat), "ERROR", err)
+                return cfg, err
+        }</span> else<span class="cov8" title="1"> {
+                return cfg, nil
+        }</span>
+}
+
+// ValidateJson - a utility function that ensures the required fields are valid
+// Also helps in ensuring high test coverage
+// As the logger can only be configured after we read the config
+// I make use of the stdout for error logging
+// It takes in a Config object and returns both Config and error objects
+func ValidateJson(cfg Config) (Config, error) <span class="cov8" title="1">{
+        e := "Config Level is a mandatory field"
+        if cfg.Level == "" </span><span class="cov8" title="1">{
+                fmt.Printf(fmterror, start.Format(timeformat), "ERROR", e)
+                return cfg, errors.New(e)
+        }</span> else<span class="cov8" title="1"> {
+                // override if we have envars set
+                if os.Getenv("LOG_LEVEL") != "" </span><span class="cov8" title="1">{
+                        cfg.Level = os.Getenv("LOG_LEVEL")
+                }</span>
+        }
+
+        <span class="cov8" title="1">e = "Config Port is a mandatory field"
+        if cfg.Port == "" </span><span class="cov8" title="1">{
+                fmt.Printf(fmterror, start.Format(timeformat), "ERROR", e)
+                return cfg, errors.New(e)
+        }</span> else<span class="cov8" title="1"> {
+                // override if we have envars set
+                if os.Getenv("SERVER_PORT") != "" </span><span class="cov8" title="1">{
+                        cfg.Port = os.Getenv("SERVER_PORT")
+                }</span>
+        }
+
+        <span class="cov8" title="1">e = "Redis Host and Port are mandatory fields"
+        if cfg.RedisDB.Port == "" || cfg.RedisDB.Host == "" </span><span class="cov8" title="1">{
+                fmt.Printf(fmterror, start.Format(timeformat), "ERROR", e)
+                return cfg, errors.New(e)
+        }</span> else<span class="cov8" title="1"> {
+                // override if we have envars set
+                if os.Getenv("REDIS_HOST") != "" </span><span class="cov8" title="1">{
+                        cfg.RedisDB.Host = os.Getenv("REDIS_HOST")
+                }</span>
+                <span class="cov8" title="1">if os.Getenv("REDIS_PORT") != "" </span><span class="cov8" title="1">{
+                        cfg.RedisDB.Port = os.Getenv("REDIS_PORT")
+                }</span>
+        }
+
+        <span class="cov8" title="1">if os.Getenv("URL") != "" </span><span class="cov0" title="0">{
+                cfg.Url = os.Getenv("URL")
+        }</span>
+
+        <span class="cov8" title="1">if os.Getenv("TOKEN") != "" </span><span class="cov8" title="1">{
+                cfg.Token = os.Getenv("TOKEN")
+        }</span>
+
+        // all checks pass we are good to go
+        <span class="cov8" title="1">return cfg, nil</span>
+}
+
+// Init - Combine all our utility functions to ensure a valid schema and json data
+func Init(filename string) (Config, error) <span class="cov8" title="1">{
+        start = time.Now()
+        var cfg Config
+
+        file, err := ReadFile(filename)
+        if err != nil </span><span class="cov8" title="1">{
+                return cfg, err
+        }</span>
+
+        <span class="cov8" title="1">cfg, e := ParseJson(file)
+        if e != nil </span><span class="cov8" title="1">{
+                return cfg, e
+        }</span>
+
+        <span class="cov8" title="1">cfg, er := ValidateJson(cfg)
+        if er != nil </span><span class="cov8" title="1">{
+                return cfg, er
+        }</span>
+
+        <span class="cov8" title="1">fmt.Printf(fmtinfo, start.Format(timeformat), "INFO", "Config data read successfully")
+        return cfg, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package main
+
+import (
+        "encoding/json"
+        "errors"
+        "fmt"
+        "github.com/imdario/mergo"
+        "gopkg.in/mgo.v2"
+        "gopkg.in/mgo.v2/bson"
+        "io/ioutil"
+        "net/http"
+        "strconv"
+)
+
+const (
+        MSGFORMAT                 string = "function %s : %v\n"
+        DBSETUP                   string = "DBSetup"
+        DBMIGRATE                 string = "DBMigrate"
+        DBUPDATEAFFILIATESPECIFIC string = "DBUpdateAffiliateSpecific"
+        DBUPDATESTOCKCURRENTPRICE string = "DBUpdateStockCurrentPrice"
+        DBUPDATESTOCK             string = "DBUpdateStock"
+        DBGETAFFILIATES           string = "DBGetAffiliates"
+        DBGETPUBLICATIONS         string = "DBGetPublications"
+        DBGETSTOCKS               string = "DBGetStocks"
+        DBWATCHLIST               string = "DBUpdateWatchlist"
+        AFFILIATE                 string = "affiliate"
+        AFFILIATES                string = "affiliates"
+        AFFILIATEID               string = "affiliateid"
+        PUBLICATIONS              string = "publications"
+        PUBLICATIONID             string = "publicationid"
+        STOCKS                    string = "stocks"
+        SYMBOL                    string = "symbol"
+)
+
+func fp(msg string, obj interface{}) string <span class="cov8" title="1">{
+        return fmt.Sprintf(MSGFORMAT, msg, obj)
+}</span>
+
+func (c *Connectors) DBSetup(b []byte) error <span class="cov8" title="1">{
+        // This function must be run before DBMigrate
+        // initial check TBD
+        logger.Trace(DBSETUP)
+        var affiliates []Affiliate
+        // read the payload in the form of []Affiliate
+        // parse input and store to db
+        e := json.Unmarshal(b, &amp;affiliates)
+        if e != nil </span><span class="cov8" title="1">{
+                logger.Error(fp(DBSETUP, e.Error()))
+                return e
+        }</span>
+        <span class="cov8" title="1">logger.Debug(fp(DBSETUP+" Inserting data", affiliates))
+        s := c.session.Clone()
+        collection := s.DB(config.MongoDB.DatabaseName).C(AFFILIATES)
+        defer s.Close()
+        // convert to []interface{} for array insert
+        var ui []interface{}
+        for _, t := range affiliates </span><span class="cov8" title="1">{
+                ui = append(ui, t)
+        }</span>
+        <span class="cov8" title="1">e = collection.Insert(ui...)
+        if e != nil </span><span class="cov0" title="0">{
+                logger.Error(fp(DBSETUP+" Inserting data", e.Error()))
+                return e
+        }</span>
+        <span class="cov8" title="1">return nil</span>
+}
+
+func (c *Connectors) DBIndex() error <span class="cov8" title="1">{
+
+        logger.Trace("DBIndex")
+        s := c.session.Clone()
+        collection := s.DB(config.MongoDB.DatabaseName).C(AFFILIATES)
+        index := mgo.Index{
+                Key: []string{"id"},
+        }
+        defer s.Close()
+        err := collection.EnsureIndex(index)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">collection = s.DB(config.MongoDB.DatabaseName).C(PUBLICATIONS)
+        index = mgo.Index{
+                Key: []string{"id", AFFILIATEID},
+        }
+        err = collection.EnsureIndex(index)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">collection = s.DB(config.MongoDB.DatabaseName).C(STOCKS)
+        index = mgo.Index{
+                Key: []string{"id", PUBLICATIONID, SYMBOL},
+        }
+        err = collection.EnsureIndex(index)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">return nil</span>
+}
+
+// DBMigrate this function reads data via the tradesmiths api and stores the structure into mongodb
+// It takes in a byte array and returns an error
+// The receiver Connectors is used to allow for unit testing
+func (c *Connectors) DBMigrate(b []byte) error <span class="cov8" title="1">{
+
+        logger.Trace(DBMIGRATE)
+
+        var affiliate Affiliate
+        var publications []Publication
+        var stocks []Stock
+        var list []Stock
+        var keys = make(map[string]bool)
+        var j map[string]interface{}
+
+        e := json.Unmarshal(b, &amp;j)
+        if e != nil </span><span class="cov8" title="1">{
+                logger.Error(fp(DBMIGRATE, e.Error()))
+                return e
+        }</span>
+
+        <span class="cov8" title="1">affiliateName := fmt.Sprintf("%s", j[AFFILIATE])
+        // do lookup to get affiliate token on DB
+        s := c.session.Clone()
+        collection := s.DB(config.MongoDB.DatabaseName).C(AFFILIATES)
+
+        // find the affiliate info in DB
+        // first find the collection with the given ID
+        query := bson.M{"name": affiliateName}
+        e = collection.Find(query).One(&amp;affiliate)
+        logger.Trace(fp(DBMIGRATE+" : affiliate data", affiliate))
+        if e != nil </span><span class="cov0" title="0">{
+                logger.Error(fp(DBMIGRATE+" : finding affiliate", e.Error()))
+                return e
+        }</span>
+
+        // do the api call to get Publications
+        <span class="cov8" title="1">req, err := http.NewRequest("GET", config.Url+"ApiPortfolio/GetAllPortfolios/?ApiKey="+affiliate.Token, nil)
+        logger.Info(fp("DBMigrate URL info", config.Url+"ApiPortfolio/GetAllPortfolios/?ApiKey="+affiliate.Token))
+        resp, err := c.http.Do(req)
+        logger.Info(fmt.Sprintf("Retrieving all publication for affiliate %s %d", affiliate.Name, affiliate.Id))
+        if err != nil || resp.StatusCode != 200 </span><span class="cov0" title="0">{
+                logger.Error(fp(DBMIGRATE, err.Error()))
+                return err
+        }</span>
+        <span class="cov8" title="1">defer resp.Body.Close()
+        body, err := ioutil.ReadAll(resp.Body)
+        if err != nil </span><span class="cov0" title="0">{
+                logger.Error(fp(DBMIGRATE, err.Error()))
+                return err
+        }</span>
+
+        // convert json to schema
+        <span class="cov8" title="1">json.Unmarshal(body, &amp;publications)
+        for x, _ := range publications </span><span class="cov0" title="0">{
+                logger.Debug(fmt.Sprintf("Publications info %d", publications[x].Id))
+                publications[x].AffiliateId = affiliate.Id
+                req, err := http.NewRequest("GET", config.Url+"ApiPosition/GetListPositinsByPortfolioId/?ApiKey="+affiliate.Token+"&amp;portfolioid="+strconv.Itoa(publications[x].Id), nil)
+                logger.Debug(fp("DBMigrate URL info", config.Url+"ApiPosition/GetListPositinsByPortfolioId/?ApiKey="+affiliate.Token+"&amp;portfolioid="+strconv.Itoa(publications[x].Id)))
+                resp, err := c.http.Do(req)
+                logger.Info(fp("DBMigrate retrieving all stocks for publication", publications[x].Name))
+                if err != nil || resp.StatusCode != 200 </span><span class="cov0" title="0">{
+                        logger.Error(fp("DBMigrate retrieving stock info", err.Error()))
+                        return err
+                }</span>
+                <span class="cov0" title="0">defer resp.Body.Close()
+                body, err := ioutil.ReadAll(resp.Body)
+                if err != nil </span><span class="cov0" title="0">{
+                        logger.Error(fp(DBMIGRATE, err.Error()))
+                        return err
+                }</span>
+                <span class="cov0" title="0">logger.Info(fmt.Sprintf("DBMigrate json data from url %s", string(body)))
+                json.Unmarshal(body, &amp;stocks)
+                for y, _ := range stocks </span><span class="cov0" title="0">{
+                        stocks[y].PublicationId = publications[x].Id
+                        // check for duplicates , dont add to list if it exists
+                        if _, value := keys[stocks[y].Symbol]; !value </span><span class="cov0" title="0">{
+                                keys[stocks[y].Symbol] = true
+                                list = append(list, stocks[y])
+                        }</span>
+                }
+        }
+
+        <span class="cov8" title="1">logger.Trace(fp("DBMigrate publications info", publications))
+        logger.Trace(fp("DBMigrate stocks info", list))
+
+        collection = s.DB(config.MongoDB.DatabaseName).C(PUBLICATIONS)
+        // store to DB
+        // convert to []interface{} for array insert
+        var ui []interface{}
+        for _, t := range publications </span><span class="cov0" title="0">{
+                ui = append(ui, t)
+        }</span>
+
+        <span class="cov8" title="1">e = collection.Insert(ui...)
+        if e != nil </span><span class="cov0" title="0">{
+                logger.Error(fp("DBMigrate inserting publications", e.Error()))
+                return e
+        }</span>
+        <span class="cov8" title="1">collection = s.DB(config.MongoDB.DatabaseName).C(STOCKS)
+
+        defer s.Close()
+
+        var ux []interface{}
+        for _, t := range list </span><span class="cov0" title="0">{
+                ux = append(ux, t)
+        }</span>
+
+        <span class="cov8" title="1">e = collection.Insert(ux...)
+        if e != nil </span><span class="cov0" title="0">{
+                logger.Error(fp("DBMigrate inserting stocks", e.Error()))
+                return e
+        }</span>
+
+        // all good
+        <span class="cov8" title="1">return nil</span>
+}
+
+// DBUpdateAffiliateSpecific this function reads data via the tradesmiths api and updates the current mongodb with affiliate specific info
+// This is in the form Buy, Stop, Status and Recommendation info
+// It takes in a byte array and returns an error
+// The receiver Connectors is used to allow for unit testing
+func (c *Connectors) DBUpdateAffiliateSpecific(b []byte) error <span class="cov8" title="1">{
+
+        logger.Trace(DBUPDATEAFFILIATESPECIFIC)
+
+        var affiliate Affiliate
+        var publications []Publication
+        var publication Publication
+        var tss []TradeSmithSchema
+        var stock Stock
+        var keys = make(map[string]bool)
+        var j map[string]interface{}
+
+        e := json.Unmarshal(b, &amp;j)
+        if e != nil </span><span class="cov0" title="0">{
+                logger.Error(fp(DBUPDATEAFFILIATESPECIFIC, e.Error()))
+                return e
+        }</span>
+
+        <span class="cov8" title="1">affiliateName := fmt.Sprintf("%s", j[AFFILIATE])
+        // do lookup to get affiliate token on DB
+        s := c.session.Clone()
+        collection := s.DB(config.MongoDB.DatabaseName).C(AFFILIATES)
+
+        // find the affiliate info in DB
+        // first find the collection with the given ID
+        query := bson.M{"name": affiliateName}
+        e = collection.Find(query).One(&amp;affiliate)
+        logger.Trace(fp(DBUPDATEAFFILIATESPECIFIC+" : affiliate data", affiliate))
+        if e != nil </span><span class="cov0" title="0">{
+                logger.Error(fp(DBUPDATEAFFILIATESPECIFIC, e.Error()))
+                return e
+        }</span>
+
+        // now get all the Publications
+        <span class="cov8" title="1">collection = s.DB(config.MongoDB.DatabaseName).C(PUBLICATIONS)
+        // first find the collection with the given ID
+        query = bson.M{AFFILIATEID: affiliate.Id}
+
+        // first find the collection with the given ID
+        iter := collection.Find(query).Sort("name").Iter()
+
+        for iter.Next(&amp;publication) </span><span class="cov0" title="0">{
+                logger.Trace(fp(DBUPDATEAFFILIATESPECIFIC+" publication data", publication))
+                publications = append(publications, publication)
+        }</span>
+        <span class="cov8" title="1">if iter.Err() != nil </span><span class="cov0" title="0">{
+                logger.Error(fp(DBUPDATEAFFILIATESPECIFIC+" : publication data", iter.Err()))
+                iter.Close()
+                return iter.Err()
+        }</span>
+        <span class="cov8" title="1">iter.Close()
+
+        // we iterate through each publication and do a request on the tradesmith api for the publication
+        // the json is transformed into a schema and the relevant stock is updated
+
+        // do the api call to get Publications
+        for x, _ := range publications </span><span class="cov0" title="0">{
+                req, err := http.NewRequest("GET", config.Url+"ApiPosition/GetAllByPortfolioId/?ApiKey="+affiliate.Token+"&amp;portfolioId="+strconv.Itoa(publications[x].Id), nil)
+                logger.Debug(fp("DBUpdateAffiliateSpecific URL info", config.Url+"ApiPosition/GetAllByPortfolioid/?ApiKey="+affiliate.Token+"&amp;portfolioId="+strconv.Itoa(publications[x].Id)))
+                resp, err := c.http.Do(req)
+                logger.Info(fp("DBUpdateAffiliateSpecific retrieving all positions for publication", publications[x].Id))
+                if err != nil || resp.StatusCode != 200 </span><span class="cov0" title="0">{
+                        logger.Error(fp(DBUPDATEAFFILIATESPECIFIC, err.Error()))
+                        return err
+                }</span>
+                <span class="cov0" title="0">defer resp.Body.Close()
+                body, err := ioutil.ReadAll(resp.Body)
+                if err != nil </span><span class="cov0" title="0">{
+                        logger.Error(fp(DBUPDATEAFFILIATESPECIFIC, err.Error()))
+                        return err
+                }</span>
+
+                // convert json to schema
+                <span class="cov0" title="0">e := json.Unmarshal(body, &amp;tss)
+                if e != nil </span><span class="cov0" title="0">{
+                        logger.Error(fp(DBUPDATEAFFILIATESPECIFIC, err.Error()))
+                        return err
+                }</span>
+                <span class="cov0" title="0">logger.Debug(fp(DBUPDATEAFFILIATESPECIFIC+" stock info from TradeSmiths", tss))
+
+                for y, _ := range tss </span><span class="cov0" title="0">{
+                        if keys[tss[y].Symbol] </span><span class="cov0" title="0">{
+                                logger.Info(fp(DBUPDATEAFFILIATESPECIFIC+" duplicate stock found no updates will be made", tss[y].Symbol))
+                        }</span> else<span class="cov0" title="0"> {
+                                if tss[y].Symbol != "" </span><span class="cov0" title="0">{
+                                        // now to a lookup to the DB for the symbol
+                                        st := s.DB(config.MongoDB.DatabaseName).C(STOCKS)
+                                        logger.Trace(fp("DBUpdateAffiliateSpecific looking up stock", tss[y].Symbol))
+                                        query := bson.M{SYMBOL: tss[y].Symbol}
+                                        // first find the collection with the given ID
+                                        err := st.Find(query).One(&amp;stock)
+                                        if err != nil </span><span class="cov0" title="0">{
+                                                return err
+                                        }</span>
+                                        // update the fields we are interested in
+                                        <span class="cov0" title="0">stock.Buy = tss[y].Buy
+                                        stock.Stop = tss[y].Stop
+                                        stock.Recommendation = tss[y].Recommendation.Info
+                                        stock.Status = tss[y].Status
+
+                                        // update the merged data
+                                        query = bson.M{"_id": bson.ObjectIdHex(stock.UID.Hex())}
+                                        logger.Debug(fp(DBUPDATEAFFILIATESPECIFIC+" : merged data", stock))
+                                        e = st.Update(query, stock)
+                                        if e != nil </span><span class="cov0" title="0">{
+                                                logger.Error(fp(DBUPDATEAFFILIATESPECIFIC+" : updating", err.Error()))
+                                                return e
+                                        }</span>
+                                        // we keep track odf updated symbols to eliminate duplicates
+                                        <span class="cov0" title="0">keys[stock.Symbol] = true</span>
+                                } else<span class="cov0" title="0"> {
+                                        logger.Error(fp(DBUPDATEAFFILIATESPECIFIC, "Empty stock symbol - please verfiy the tradesmiths api"))
+                                }</span>
+                        }
+                }
+        }
+        // all good
+        <span class="cov8" title="1">return nil</span>
+}
+
+// DBUpdateStockCurrentPrice this function reads stock data from the db and uses the extrenal api to update current stock price
+// It takes in a byte array and returns an error
+// The receiver Connectors is used to allow for unit testing
+func (c *Connectors) DBUpdateStockCurrentPrice() error <span class="cov8" title="1">{
+
+        logger.Trace(DBUPDATESTOCKCURRENTPRICE)
+
+        var stockprice AlphaAdvantage
+        var stocks []Stock
+        var stock Stock
+
+        // do lookup to get affiliate token on DB
+        s := c.session.Clone()
+        defer s.Close()
+        collection := s.DB(config.MongoDB.DatabaseName).C(STOCKS)
+
+        // find the stocks
+        iter := collection.Find(nil).Sort(SYMBOL).Iter()
+
+        for iter.Next(&amp;stock) </span><span class="cov0" title="0">{
+                logger.Trace(fp(DBUPDATESTOCKCURRENTPRICE+" : data", stock))
+                stocks = append(stocks, stock)
+        }</span>
+        <span class="cov8" title="1">if iter.Err() != nil </span><span class="cov0" title="0">{
+                logger.Error(fp(DBUPDATESTOCKCURRENTPRICE+" : data", iter.Err()))
+                iter.Close()
+                return iter.Err()
+        }</span>
+        <span class="cov8" title="1">iter.Close()
+
+        // iterate through each stock
+        for x, _ := range stocks </span><span class="cov0" title="0">{
+
+                // Get the latest stock data
+                req, err := http.NewRequest("GET", config.QuoteUrl+"GLOBAL_QUOTE&amp;symbol="+stocks[x].Symbol+"&amp;apikey="+config.Token, nil)
+                resp, err := c.http.Do(req)
+                logger.Info(fp(DBUPDATESTOCKCURRENTPRICE, config.QuoteUrl))
+                if err != nil || resp.StatusCode != 200 </span><span class="cov0" title="0">{
+                        // just log the error - this is not a critical error
+                        logger.Error(fp(DBUPDATESTOCKCURRENTPRICE, err.Error()))
+                }</span>
+
+                <span class="cov0" title="0">defer resp.Body.Close()
+                body, err := ioutil.ReadAll(resp.Body)
+                if err != nil </span><span class="cov0" title="0">{
+                        logger.Error(fp(DBUPDATESTOCKCURRENTPRICE, err.Error()))
+                }</span>
+                <span class="cov0" title="0">e := json.Unmarshal(body, &amp;stockprice)
+                if e != nil </span><span class="cov0" title="0">{
+                        logger.Error(fp(DBUPDATESTOCKCURRENTPRICE, e.Error()))
+                }</span>
+
+                <span class="cov0" title="0">stocks[x].Last, _ = strconv.ParseFloat(stockprice.GlobalQuote.Price, 64)
+                stocks[x].Change, _ = strconv.ParseFloat(stockprice.GlobalQuote.ChangePercent[:len(stockprice.GlobalQuote.ChangePercent)-1], 64)
+                query := bson.M{"_id": bson.ObjectIdHex(stocks[x].UID.Hex())}
+                logger.Debug(fp(DBUPDATESTOCKCURRENTPRICE+" : merged data", stocks[x]))
+                e = collection.Update(query, stocks[x])
+                if e != nil </span><span class="cov0" title="0">{
+                        logger.Error(fp(DBUPDATESTOCKCURRENTPRICE+" : merged data", e.Error()))
+                }</span>
+        }
+        <span class="cov8" title="1">return nil</span>
+}
+
+// DBUpdateStock
+// It takes a byte array and returns both the Stock array and error objects
+func (c *Connectors) DBUpdateStock(body []byte) ([]Stock, error) <span class="cov8" title="1">{
+
+        var data, existing Stock
+        var stocks []Stock
+
+        e := json.Unmarshal(body, &amp;data)
+        if e != nil </span><span class="cov8" title="1">{
+                logger.Error(fp(DBUPDATESTOCK+" : reading json", e.Error()))
+                return stocks, e
+        }</span>
+
+        <span class="cov8" title="1">logger.Debug(fp(DBUPDATESTOCK+" : data", data))
+
+        // session copy
+        s := c.session.Clone()
+        if s == nil </span><span class="cov0" title="0">{
+                logger.Error(fp(DBUPDATESTOCK, "Session clone"))
+                return stocks, errors.New("Session clone")
+        }</span>
+
+        <span class="cov8" title="1">defer s.Close()
+        // collection publications
+        collection := s.DB(config.MongoDB.DatabaseName).C(STOCKS)
+
+        // check the bson id - the payload must include the id - its not taken from the query string
+        f := bson.IsObjectIdHex(data.UID.Hex())
+        if f == false </span><span class="cov0" title="0">{
+                return stocks, errors.New(DBUPDATESTOCK + " bson ObjectId not valid")
+        }</span>
+
+        // first find the collection with the given ID
+        <span class="cov8" title="1">err := collection.FindId(data.UID).One(&amp;existing)
+        if err != nil </span><span class="cov0" title="0">{
+                return stocks, err
+        }</span>
+        <span class="cov8" title="1">logger.Debug(fp(DBUPDATESTOCK+" : from database", existing))
+
+        // now merge the 2 structs
+        // takes the form (dst,src,mode)
+        em := mergo.Merge(&amp;existing, data, mergo.WithOverride)
+        if em != nil </span><span class="cov0" title="0">{
+                return stocks, err
+        }</span>
+
+        // update the merged structs
+        <span class="cov8" title="1">query := bson.M{"_id": bson.ObjectIdHex(data.UID.Hex())}
+        logger.Debug(fp(DBUPDATESTOCK+" : merged data", existing))
+        e = collection.Update(query, existing)
+        if e != nil </span><span class="cov0" title="0">{
+                logger.Error(fp(DBUPDATESTOCK+" : merged data", e.Error()))
+                return stocks, e
+        }</span>
+
+        <span class="cov8" title="1">stocks = append(stocks, existing)
+        // all good
+        return stocks, nil</span>
+}
+
+func (c *Connectors) DBGetAffiliates() ([]Affiliate, error) <span class="cov8" title="1">{
+
+        logger.Trace(DBGETAFFILIATES)
+
+        var affiliates []Affiliate
+        var data Affiliate
+
+        // do lookup to get affiliate token on DB
+        s := c.session.Clone()
+        defer s.Close()
+        collection := s.DB(config.MongoDB.DatabaseName).C(AFFILIATES)
+        // first find the collection with the given ID
+        iter := collection.Find(nil).Sort("_id").Iter()
+
+        for iter.Next(&amp;data) </span><span class="cov0" title="0">{
+                logger.Trace(fp(DBGETAFFILIATES+" : data", data))
+                affiliates = append(affiliates, data)
+        }</span>
+        <span class="cov8" title="1">if iter.Err() != nil </span><span class="cov0" title="0">{
+                logger.Error(fp(DBGETAFFILIATES+" : data", iter.Err()))
+                iter.Close()
+                return affiliates, iter.Err()
+        }</span>
+        <span class="cov8" title="1">iter.Close()
+
+        // all good
+        return affiliates, nil</span>
+}
+
+func (c *Connectors) DBGetPublications(id string) ([]Publication, error) <span class="cov8" title="1">{
+
+        logger.Trace(DBGETPUBLICATIONS)
+
+        var publications []Publication
+        var data Publication
+
+        // do lookup to get affiliate token on DB
+        s := c.session.Clone()
+        defer s.Close()
+        collection := s.DB(config.MongoDB.DatabaseName).C(PUBLICATIONS)
+        // first find the collection with the given ID
+        affiliateId, _ := strconv.Atoi(id)
+        query := bson.M{AFFILIATEID: affiliateId}
+
+        // first find the collection with the given ID
+        iter := collection.Find(query).Sort("name").Iter()
+
+        for iter.Next(&amp;data) </span><span class="cov0" title="0">{
+                logger.Trace(fp(DBGETPUBLICATIONS+" : data", data))
+                publications = append(publications, data)
+        }</span>
+        <span class="cov8" title="1">if iter.Err() != nil </span><span class="cov0" title="0">{
+                logger.Error(fp(DBGETPUBLICATIONS+" : data", iter.Err()))
+                iter.Close()
+                return publications, iter.Err()
+        }</span>
+        <span class="cov8" title="1">iter.Close()
+
+        // all good
+        return publications, nil</span>
+}
+
+func (c *Connectors) DBGetStocks(id string) ([]Stock, error) <span class="cov8" title="1">{
+
+        logger.Trace(DBGETSTOCKS)
+
+        var stocks []Stock
+        var data Stock
+        var query bson.M
+
+        // do lookup to get affiliate token on DB
+        s := c.session.Clone()
+        defer s.Close()
+        collection := s.DB(config.MongoDB.DatabaseName).C(STOCKS)
+        // first find the collection with the given ID
+        if id != "0" </span><span class="cov8" title="1">{
+                publicationId, _ := strconv.Atoi(id)
+                query = bson.M{PUBLICATIONID: publicationId}
+        }</span> else<span class="cov0" title="0"> {
+                query = nil
+        }</span>
+
+        // first find the collection with the given ID
+        <span class="cov8" title="1">iter := collection.Find(query).Sort(SYMBOL).Iter()
+
+        for iter.Next(&amp;data) </span><span class="cov0" title="0">{
+                logger.Trace(fp(DBGETSTOCKS+" : data", data))
+                stocks = append(stocks, data)
+        }</span>
+        <span class="cov8" title="1">if iter.Err() != nil </span><span class="cov0" title="0">{
+                logger.Error(fp(DBGETSTOCKS+" : data", iter.Err()))
+                iter.Close()
+                return stocks, iter.Err()
+        }</span>
+        <span class="cov8" title="1">iter.Close()
+
+        // all good
+        return stocks, nil</span>
+}
+
+// DBUpdateWatchlist
+// It takes a byte array and returns both the ShcemaInterface and error objects
+func (c *Connectors) DBUpdateWatchlist(body []byte) (Watchlist, error) <span class="cov0" title="0">{
+
+        var data, existing Watchlist
+
+        e := json.Unmarshal(body, &amp;data)
+        if e != nil </span><span class="cov0" title="0">{
+                logger.Error(fp(DBWATCHLIST+" : reading json", e.Error()))
+                return data, e
+        }</span>
+
+        <span class="cov0" title="0">logger.Debug(fp(DBWATCHLIST+" : data", data))
+
+        // session copy
+        s := c.session.Clone()
+        if s == nil </span><span class="cov0" title="0">{
+                logger.Error(fp(DBWATCHLIST+" : session", "Session clone"))
+                return data, errors.New("Session clone")
+        }</span>
+
+        <span class="cov0" title="0">defer s.Close()
+        // collection publications
+        collection := s.DB(config.MongoDB.DatabaseName).C("watchlist")
+
+        // check the bson id - the payload must include the id - its not taken from the query string
+        f := bson.IsObjectIdHex(data.UID.Hex())
+        if f == false </span><span class="cov0" title="0">{
+                return data, errors.New(DBWATCHLIST + " bson ObjectId not valid")
+        }</span>
+
+        // first find the collection with the given ID
+        <span class="cov0" title="0">err := collection.FindId(data.UID).One(&amp;existing)
+        if err != nil </span><span class="cov0" title="0">{
+                // no record found lets insert
+                logger.Debug(fp(DBWATCHLIST+" : no record found inserting into database", data))
+                // now merge the 2 structs
+                // takes the form (dst,src,mode)
+                em := mergo.Merge(&amp;existing, data, mergo.WithOverride)
+                if em != nil </span><span class="cov0" title="0">{
+                        return data, err
+                }</span>
+                <span class="cov0" title="0">e = collection.Insert(existing)
+                if e != nil </span><span class="cov0" title="0">{
+                        logger.Error(fp(DBWATCHLIST+" : Inserting watchlist", e.Error()))
+                        return data, e
+                }</span>
+        } else<span class="cov0" title="0"> {
+                // always clear the stocks field
+                existing.Stocks = nil
+                logger.Debug(fp(DBWATCHLIST+" : record found updating database", existing))
+
+                // now merge the 2 structs
+                // takes the form (dst,src,mode)
+                em := mergo.Merge(&amp;existing, data, mergo.WithOverride)
+                if em != nil </span><span class="cov0" title="0">{
+                        return data, err
+                }</span>
+
+                // update the merged structs
+                <span class="cov0" title="0">query := bson.M{"_id": bson.ObjectIdHex(data.UID.Hex())}
+                logger.Debug(fp(DBWATCHLIST+" : merged data", existing))
+                e = collection.Update(query, existing)
+                if e != nil </span><span class="cov0" title="0">{
+                        logger.Error(fp(DBWATCHLIST+" : merged data", e.Error()))
+                        return data, e
+                }</span>
+        }
+
+        // all good
+        <span class="cov0" title="0">return existing, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package main
+
+import (
+        "encoding/json"
+        "fmt"
+        "github.com/gorilla/mux"
+        "io/ioutil"
+        "net/http"
+        "time"
+)
+
+// MiddlewareDBSetup a http response and request wrapper for portfolio's that are associated to affiliate
+// It takes a both response and request objects and returns void
+func MiddlewareDBSetup(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+
+        var response Response
+        var payload SchemaInterface
+
+        w.Header().Set("Content-Type", "application/json")
+        body, err := ioutil.ReadAll(r.Body)
+        if err != nil </span><span class="cov0" title="0">{
+                response = Response{StatusCode: "500", Status: "ERROR", Message: "Could not read body data (MiddlewareDBSetup) " + err.Error(), Payload: payload}
+                w.WriteHeader(http.StatusInternalServerError)
+        }</span>
+
+        <span class="cov8" title="1">err = connectors.DBSetup(body)
+        if err != nil </span><span class="cov8" title="1">{
+                response = Response{StatusCode: "500", Status: "ERROR", Message: "Data migrate (MiddlewareDBSetup) " + err.Error(), Payload: payload}
+                w.WriteHeader(http.StatusInternalServerError)
+        }</span> else<span class="cov8" title="1"> {
+                payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database setup"}
+                response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBSetup) successfull", Payload: payload}
+        }</span>
+
+        <span class="cov8" title="1">b, _ := json.MarshalIndent(response, "", "        ")
+        fmt.Fprintf(w, string(b))</span>
+}
+
+// MiddlewareDBIndex a http response and request wrapper for portfolio's that are associated to affiliate
+// It takes a both response and request objects and returns void
+func MiddlewareDBIndex(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+
+        var response Response
+        var payload SchemaInterface
+
+        w.Header().Set("Content-Type", "application/json")
+        err := connectors.DBIndex()
+        if err != nil </span><span class="cov0" title="0">{
+                response = Response{StatusCode: "500", Status: "ERROR", Message: "Indexing (MiddlewareDBIndex) " + err.Error(), Payload: payload}
+                w.WriteHeader(http.StatusInternalServerError)
+        }</span> else<span class="cov8" title="1"> {
+                payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database index"}
+                response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBIndex) successfull", Payload: payload}
+        }</span>
+
+        <span class="cov8" title="1">b, _ := json.MarshalIndent(response, "", "        ")
+        fmt.Fprintf(w, string(b))</span>
+}
+
+// MiddlewareDBGetAllAffiliates a http response and request wrapper for affiliate data
+// It takes a both response and request objects and returns void
+func MiddlewareDBGetAllAffiliates(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+
+        var response Response
+        var payload SchemaInterface
+
+        w.Header().Set("Content-Type", "application/json")
+        affiliates, err := connectors.DBGetAffiliates()
+        if err != nil </span><span class="cov0" title="0">{
+                response = Response{StatusCode: "500", Status: "ERROR", Message: "Indexing (MiddlewareDBGetAllAffiliates) " + err.Error(), Payload: payload}
+                w.WriteHeader(http.StatusInternalServerError)
+        }</span> else<span class="cov8" title="1"> {
+                payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database call to affiliates", Affiliates: affiliates}
+                response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBGetAllAffiliates) successfull", Payload: payload}
+        }</span>
+
+        <span class="cov8" title="1">b, _ := json.MarshalIndent(response, "", "        ")
+        fmt.Fprintf(w, string(b))</span>
+}
+
+// MiddlewareDBGetAllPublicationsByAffiliate a http response and request wrapper for affiliate data
+// It takes a both response and request objects and returns void
+func MiddlewareDBGetAllPublicationsByAffiliate(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+
+        var response Response
+        var payload SchemaInterface
+        vars := mux.Vars(r)
+
+        w.Header().Set("Content-Type", "application/json")
+        publications, err := connectors.DBGetPublications(vars["affiliateid"])
+        if err != nil </span><span class="cov0" title="0">{
+                response = Response{StatusCode: "500", Status: "ERROR", Message: "Indexing (MiddlewareDBGetAllPublicationsByAffiliate) " + err.Error(), Payload: payload}
+                w.WriteHeader(http.StatusInternalServerError)
+        }</span> else<span class="cov8" title="1"> {
+                payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database call to publications for affiliate " + vars["affiliateid"], Publications: publications}
+                response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBGetAllPublicationsByAffiliate) successfull", Payload: payload}
+        }</span>
+
+        <span class="cov8" title="1">b, _ := json.MarshalIndent(response, "", "        ")
+        fmt.Fprintf(w, string(b))</span>
+}
+
+// MiddlewareDBGetAllStocks a http response and request wrapper for stock data
+// It takes a both response and request objects and returns void
+func MiddlewareDBGetAllStocks(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+
+        var response Response
+        var payload SchemaInterface
+        vars := mux.Vars(r)
+
+        w.Header().Set("Content-Type", "application/json")
+        stocks, err := connectors.DBGetStocks(vars["publicationid"])
+        if err != nil </span><span class="cov0" title="0">{
+                response = Response{StatusCode: "500", Status: "ERROR", Message: "Indexing (MiddlewareDBGetAllStocks) " + err.Error(), Payload: payload}
+                w.WriteHeader(http.StatusInternalServerError)
+        }</span> else<span class="cov8" title="1"> {
+                payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database call to stocks " + vars["publicationid"], Stocks: stocks}
+                response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBGetAllStocks) successfull", Payload: payload}
+        }</span>
+
+        <span class="cov8" title="1">b, _ := json.MarshalIndent(response, "", "        ")
+        fmt.Fprintf(w, string(b))</span>
+}
+
+// MiddlewareMigrateData a http response and request wrapper for portfolio's that are associated to affiliate
+// It takes a both response and request objects and returns void
+func MiddlewareMigrateData(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+
+        var response Response
+        var payload SchemaInterface
+
+        w.Header().Set("Content-Type", "application/json")
+        body, err := ioutil.ReadAll(r.Body)
+        if err != nil </span><span class="cov0" title="0">{
+                response = Response{StatusCode: "500", Status: "ERROR", Message: "Could not read body data (MiddlewareMigrateData) " + err.Error(), Payload: payload}
+                w.WriteHeader(http.StatusInternalServerError)
+        }</span>
+
+        <span class="cov8" title="1">err = connectors.DBMigrate(body)
+        if err != nil </span><span class="cov8" title="1">{
+                response = Response{StatusCode: "500", Status: "ERROR", Message: "Data migrate (MiddlewareMigrateData) " + err.Error(), Payload: payload}
+                w.WriteHeader(http.StatusInternalServerError)
+        }</span> else<span class="cov8" title="1"> {
+                payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Affiliate data (publication and stocks)"}
+                response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareMigrateData) successfull", Payload: payload}
+        }</span>
+
+        <span class="cov8" title="1">b, _ := json.MarshalIndent(response, "", "        ")
+        fmt.Fprintf(w, string(b))</span>
+}
+
+// MiddlewareUpdateSpecific a http response and request wrapper for stocks's that are associated to affiliate
+// It takes a both response and request objects and returns void
+func MiddlewareUpdateSpecific(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+
+        var response Response
+        var payload SchemaInterface
+
+        w.Header().Set("Content-Type", "application/json")
+        body, err := ioutil.ReadAll(r.Body)
+        if err != nil </span><span class="cov0" title="0">{
+                response = Response{StatusCode: "500", Status: "ERROR", Message: "Could not read body data (MiddlewareUpdateSpecific) " + err.Error(), Payload: payload}
+                w.WriteHeader(http.StatusInternalServerError)
+        }</span>
+
+        <span class="cov8" title="1">err = connectors.DBUpdateAffiliateSpecific(body)
+        if err != nil </span><span class="cov0" title="0">{
+                response = Response{StatusCode: "500", Status: "ERROR", Message: "Data specific update (MiddlewareUpdateSpecific) " + err.Error(), Payload: payload}
+                w.WriteHeader(http.StatusInternalServerError)
+        }</span> else<span class="cov8" title="1"> {
+                payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Update of affiliate specific data for all associated stocks"}
+                response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareUpdateSpecific) successfull", Payload: payload}
+        }</span>
+
+        <span class="cov8" title="1">b, _ := json.MarshalIndent(response, "", "        ")
+        fmt.Fprintf(w, string(b))</span>
+}
+
+// MiddlewareDBUpdateStockCurrentPrice a http response and request wrapper to update the stock price and percentage change
+// It takes a both response and request objects and returns void
+func MiddlewareDBUpdateStockCurrentPrice(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+
+        var response Response
+        var payload SchemaInterface
+
+        w.Header().Set("Content-Type", "application/json")
+
+        e := connectors.DBUpdateStockCurrentPrice()
+        if e != nil </span><span class="cov0" title="0">{
+                response = Response{StatusCode: "500", Status: "ERROR", Message: "Data update (MiddlewareDBUpdateStockCurrentPrice) " + e.Error(), Payload: payload}
+                w.WriteHeader(http.StatusInternalServerError)
+        }</span> else<span class="cov8" title="1"> {
+                payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Stock update from API"}
+                response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBUpdateStockCurrentPrice) successfull", Payload: payload}
+        }</span>
+
+        <span class="cov8" title="1">b, _ := json.MarshalIndent(response, "", "        ")
+        fmt.Fprintf(w, string(b))</span>
+}
+
+// MiddlewareDBUpdateStock a http response and request wrapper to update the stock
+// It takes a both response and request objects and returns void
+func MiddlewareDBUpdateStock(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+
+        var response Response
+        var payload SchemaInterface
+
+        w.Header().Set("Content-Type", "application/json")
+        body, err := ioutil.ReadAll(r.Body)
+        if err != nil </span><span class="cov0" title="0">{
+                response = Response{StatusCode: "500", Status: "ERROR", Message: "Could not read body data (MiddlewareDBUpdateStock) " + err.Error(), Payload: payload}
+                w.WriteHeader(http.StatusInternalServerError)
+        }</span>
+
+        <span class="cov8" title="1">st, e := connectors.DBUpdateStock(body)
+        if e != nil </span><span class="cov8" title="1">{
+                response = Response{StatusCode: "500", Status: "ERROR", Message: "Data update (MiddlewareDBUpdateStock) " + e.Error(), Payload: payload}
+                w.WriteHeader(http.StatusInternalServerError)
+        }</span> else<span class="cov8" title="1"> {
+                payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Stock update", Stocks: st}
+                response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBUpdateStock) successfull", Payload: payload}
+        }</span>
+
+        <span class="cov8" title="1">b, _ := json.MarshalIndent(response, "", "        ")
+        fmt.Fprintf(w, string(b))</span>
+}
+
+func IsAlive(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        w.Header().Set("Content-Type", "application/json")
+        logger.Trace(fmt.Sprintf("used to mask cc %v", r))
+        logger.Trace(fmt.Sprintf("config data  %v", config))
+        fmt.Fprintf(w, "{\"isalive\": true , \"version\": \""+config.Version+"\"}")
+}</span>
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

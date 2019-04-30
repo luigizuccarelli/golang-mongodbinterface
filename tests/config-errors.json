@@ -1,0 +1,14 @@
+{
+    "version": "1.0.0",
+    "port": "9001",
+    "cache": "false",
+    "mongodb" : {
+      "host": "127.0.0.1",
+      "port": "27017",
+      "name": "testA",
+      "user": "orders",
+      "pwd": "orders",
+      "adminuser": "admin",
+      "adminpwd": "admin"
+    }
+}

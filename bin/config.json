@@ -1,0 +1,20 @@
+{
+    "version": "1.0.0",
+    "port": "9000",
+    "level": "trace",
+    "url": "https://servicegateway.agora-inc.com/middleware/data",
+    "token": "MYK*$#GTE457yRH45yhbes%",
+    "mongodb" : {
+      "host": "",
+      "port": "",
+      "name": "",
+      "user": "",
+      "pwd": "",
+      "adminuser": "",
+      "adminpwd": ""
+    },
+    "redisdb" : {
+      "host": "ace-redis.ace-demo-poc.svc",
+      "port": "6379"
+    }
+}
