@@ -1,0 +1,22 @@
+{
+    "version": "1.0.1",
+    "port": "9001",
+    "level": "info",
+    "url": "",
+    "microservice": "",
+    "token": "",
+    "mongodb" : {
+      "host": "",
+      "port": "",
+      "name": "",
+      "user": "",
+      "pwd": "",
+      "adminuser": "",
+      "adminpwd": ""
+    },
+    "redisdb" : {
+      "host": "",
+      "port": "",
+      "password": ""
+    }
+}

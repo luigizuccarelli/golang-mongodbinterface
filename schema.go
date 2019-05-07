@@ -60,6 +60,7 @@ type Publication struct {
 type Stock struct {
 	UID            bson.ObjectId `json:"_id" bson:"_id,omitempty"`
 	PublicationId  int           `json:"publicationid"`
+	AffiliateId    int           `json:"affiliateid"`
 	RefId          int           `json:"id"`
 	Symbol         string        `json:"symbol"`
 	Name           string        `json:"name"`
@@ -115,6 +116,7 @@ type SchemaInterface struct {
 	Affiliates   []Affiliate   `json:"affiliates"`
 	Publications []Publication `json:"publications"`
 	Stocks       []Stock       `json:"stocks"`
+	WatchList    Watchlist     `json:"watchlist"`
 }
 
 // Response schema

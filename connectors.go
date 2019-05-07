@@ -12,13 +12,15 @@ import (
 type Clients interface {
 	DBGetAffiliates() ([]Affiliate, error)
 	DBGetPublications(string) ([]Publication, error)
-	DBGetStocks(string) ([]Stock, error)
+	DBGetStocks(string, bool) ([]Stock, error)
 	DBUpdateStock(body []byte) ([]Stock, error)
 	DBIndex() error
 	DBSetup(body []byte) error
 	DBMigrate(body []byte) error
 	DBUpdateAffiliateSpecific(body []byte) error
 	DBUpdateStockCurrentPrice() error
+	DBUpdateWatchlist(body []byte) (Watchlist, error)
+	DBGetWatchlist(id string) (Watchlist, error)
 	Get(string) (string, error)
 	Set(string, string, time.Duration) (string, error)
 	Close() error

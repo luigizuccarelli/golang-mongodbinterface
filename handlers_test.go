@@ -22,7 +22,7 @@ var (
 type Clients interface {
 	DBGetAffiliates() ([]Affiliate, error)
 	DBGetPublications(string) ([]Publication, error)
-	DBGetStocks(string) ([]Stock, error)
+	DBGetStocks(string, bool) ([]Stock, error)
 	DBUpdateStock(body []byte) ([]Stock, error)
 	DBIndex() error
 	DBSetup(body []byte) error
@@ -30,6 +30,7 @@ type Clients interface {
 	DBUpdateAffiliateSpecific(body []byte) error
 	DBUpdateStockCurrentPrice() error
 	DBUpdateWatchlist(body []byte) (Watchlist, error)
+	DBGetWatchlist(string) (Watchlist, error)
 	Get(string) (string, error)
 	Set(string, string, time.Duration) (string, error)
 	Close() error
@@ -281,146 +282,6 @@ func TestAll(t *testing.T) {
 	store = map[string]string{"stock": ""}
 
 	// create anonymous struct
-	/*
-		tests := []struct {
-			Name     string
-			Payload  string
-			Handler  string
-			FileName string
-			want     bool
-			errorMsg string
-		}{
-			{
-				"DBSetup should pass",
-				"[{\"id\": 1, \"name\":\"Test\",\"token\": \"sdasdsafsfdgdfgf\"}]",
-				"DBSetup",
-				"tests/payload-example.json",
-				false,
-				"Handler %s returned - got (%v) wanted (%v)",
-			},
-			{
-				"DBSetup should fail",
-				`[{"test":"]`,
-				"DBSetup",
-				"tests/payload-example.json",
-				true,
-				"Handler %s returned - got (%v) wanted (%v)",
-			},
-			{
-				"DBIndex should pass",
-				"[{\"id\": 1, \"name\":\"Test\",\"token\": \"sdasdsafsfdgdfgf\"}]",
-				"DBIndex",
-				"tests/payload-example.json",
-				false,
-				"Handler %s returned - got (%v) wanted (%v)",
-			},
-			{
-				"DBMigrate should pass",
-				"{\"id\": 1, \"affiliate\":\"Test\"}",
-				"DBMigrate",
-				"tests/publication.json",
-				false,
-				"Handler %s returned - got (%v) wanted (%v)",
-			},
-			{
-				"DBMigrate should fail",
-				`{"test":"`,
-				"DBMigrate",
-				"tests/payload-example.json",
-				true,
-				"Handler %s returned - got (%v) wanted (%v)",
-			},
-			{
-				"DBUpdateAffiliateSpecific should pass",
-				"{\"id\": 1, \"affiliate\":\"Test\"}",
-				"DBUpdateAffiliateSpecific",
-				"tests/payload-example.json",
-				false,
-				"Handler %s returned - got (%v) wanted (%v)",
-			},
-			{
-				"DBUpdateAffiliateSpecific should fail",
-				`{"test":"`,
-				"DBUpdateAffiliateSpecific",
-				"tests/payload-example.json",
-				true,
-				"Handler %s returned - got (%v) wanted (%v)",
-			},
-			{
-				"DBUpdateStockCurrentPrice should pass",
-				"{\"id\": 1, \"affiliate\":\"Test\"}",
-				"DBUpdateStockCurrentPrice",
-				"tests/payload-example.json",
-				false,
-				"Handler %s returned - got (%v) wanted (%v)",
-			},
-			{
-				"DBUpdateStock should pass",
-				"{\"_id\": \"5cc042307ccc69ada893144c\"}",
-				"DBUpdateStock",
-				"tests/payload-example.json",
-				false,
-				"Handler %s returned - got (%v) wanted (%v)",
-			},
-			{
-				"DBUpdateStock should fail",
-				`{"test":"`,
-				"DBUpdateStock",
-				"tests/payload-example.json",
-				true,
-				"Handler %s returned - got (%v) wanted (%v)",
-			},
-			{
-				"DBGetAffiliates should pass",
-				"{\"id\": 1, \"affiliate\":\"Test\"}",
-				"DBGetAffiliates",
-				"tests/payload-example.json",
-				false,
-				"Handler %s returned - got (%v) wanted (%v)",
-			},
-			{
-				"DBGetPublications should pass",
-				"{\"id\": 1, \"affiliate\":\"Test\"}",
-				"DBGetPublications",
-				"tests/payload-example.json",
-				false,
-				"Handler %s returned - got (%v) wanted (%v)",
-			},
-			{
-				"DBGetStocks should pass",
-				"5cc042307ccc69ada893144c",
-				"DBGetStocks",
-				"tests/payload-example.json",
-				false,
-				"Handler %s returned - got (%v) wanted (%v)",
-			},
-			{
-				"DBGetStocks should pass",
-				"0",
-				"DBGetStocks",
-				"tests/payload-example.json",
-				false,
-				"Handler %s returned - got (%v) wanted (%v)",
-			},
-			{
-				"DBUpdateWatchlist should pass",
-				"{\"_id\": \"5cc042307ccc69ada893144c\", \"affiliate\":\"Test\"}",
-				"DBUpdateWatchlist",
-				"tests/payload-example.json",
-				false,
-				"Handler %s returned - got (%v) wanted (%v)",
-			},
-			{
-				"DBUpdateWatchlist should pass",
-				"{ \"test\": ",
-				"DBUpdateWatchlist",
-				"tests/payload-example.json",
-				true,
-				"Handler %s returned - got (%v) wanted (%v)",
-			},
-		}
-	*/
-
 	tests := []struct {
 		Name     string
 		Payload  string
@@ -430,6 +291,30 @@ func TestAll(t *testing.T) {
 		errorMsg string
 	}{
 		{
+			"DBSetup should pass",
+			"[{\"id\": 1, \"name\":\"Test\",\"token\": \"sdasdsafsfdgdfgf\"}]",
+			"DBSetup",
+			"tests/payload-example.json",
+			false,
+			"Handler %s returned - got (%v) wanted (%v)",
+		},
+		{
+			"DBSetup should fail",
+			`[{"test":"]`,
+			"DBSetup",
+			"tests/payload-example.json",
+			true,
+			"Handler %s returned - got (%v) wanted (%v)",
+		},
+		{
+			"DBIndex should pass",
+			"[{\"id\": 1, \"name\":\"Test\",\"token\": \"sdasdsafsfdgdfgf\"}]",
+			"DBIndex",
+			"tests/payload-example.json",
+			false,
+			"Handler %s returned - got (%v) wanted (%v)",
+		},
+		{
 			"DBMigrate should pass",
 			"{\"id\": 1, \"affiliate\":\"Test\"}",
 			"DBMigrate",
@@ -437,7 +322,123 @@ func TestAll(t *testing.T) {
 			false,
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
+		{
+			"DBMigrate should fail",
+			`{"test":"`,
+			"DBMigrate",
+			"tests/payload-example.json",
+			true,
+			"Handler %s returned - got (%v) wanted (%v)",
+		},
+		{
+			"DBUpdateAffiliateSpecific should pass",
+			"{\"id\": 1, \"affiliate\":\"Test\"}",
+			"DBUpdateAffiliateSpecific",
+			"tests/payload-example.json",
+			false,
+			"Handler %s returned - got (%v) wanted (%v)",
+		},
+		{
+			"DBUpdateAffiliateSpecific should fail",
+			`{"test":"`,
+			"DBUpdateAffiliateSpecific",
+			"tests/payload-example.json",
+			true,
+			"Handler %s returned - got (%v) wanted (%v)",
+		},
+		{
+			"DBUpdateStockCurrentPrice should pass",
+			"{\"id\": 1, \"affiliate\":\"Test\"}",
+			"DBUpdateStockCurrentPrice",
+			"tests/payload-example.json",
+			false,
+			"Handler %s returned - got (%v) wanted (%v)",
+		},
+		{
+			"DBUpdateStock should pass",
+			"{\"_id\": \"5cc042307ccc69ada893144c\"}",
+			"DBUpdateStock",
+			"tests/payload-example.json",
+			false,
+			"Handler %s returned - got (%v) wanted (%v)",
+		},
+		{
+			"DBUpdateStock should fail",
+			`{"test":"`,
+			"DBUpdateStock",
+			"tests/payload-example.json",
+			true,
+			"Handler %s returned - got (%v) wanted (%v)",
+		},
+		{
+			"DBGetAffiliates should pass",
+			"{\"id\": 1, \"affiliate\":\"Test\"}",
+			"DBGetAffiliates",
+			"tests/payload-example.json",
+			false,
+			"Handler %s returned - got (%v) wanted (%v)",
+		},
+		{
+			"DBGetPublications should pass",
+			"{\"id\": 1, \"affiliate\":\"Test\"}",
+			"DBGetPublications",
+			"tests/payload-example.json",
+			false,
+			"Handler %s returned - got (%v) wanted (%v)",
+		},
+		{
+			"DBGetStocks should pass",
+			"5cc042307ccc69ada893144c",
+			"DBGetStocks",
+			"tests/payload-example.json",
+			false,
+			"Handler %s returned - got (%v) wanted (%v)",
+		},
+		{
+			"DBGetStocks should pass",
+			"0",
+			"DBGetStocks",
+			"tests/payload-example.json",
+			false,
+			"Handler %s returned - got (%v) wanted (%v)",
+		},
+		{
+			"DBUpdateWatchlist should pass",
+			"{\"_id\": \"5cc042307ccc69ada893144c\", \"affiliate\":\"Test\"}",
+			"DBUpdateWatchlist",
+			"tests/payload-example.json",
+			false,
+			"Handler %s returned - got (%v) wanted (%v)",
+		},
+		{
+			"DBUpdateWatchlist should pass",
+			"{ \"test\": ",
+			"DBUpdateWatchlist",
+			"tests/payload-example.json",
+			true,
+			"Handler %s returned - got (%v) wanted (%v)",
+		},
 	}
+
+	/*
+	  tests := []struct {
+			Name     string
+			Payload  string
+			Handler  string
+			FileName string
+			want     bool
+			errorMsg string
+		}{
+			{
+				"DBMigrate should pass",
+				"{\"id\": 1, \"affiliate\":\"Test\"}",
+				"DBMigrate",
+				"tests/publication.json",
+				false,
+				"Handler %s returned - got (%v) wanted (%v)",
+			},
+		}
+	*/
 
 	var err error
 	for _, tt := range tests {
@@ -470,7 +471,7 @@ func TestAll(t *testing.T) {
 			_, err = connectors.DBGetPublications(tt.Payload)
 		case "DBGetStocks":
 			connectors = NewTestClients(tt.FileName, 200)
-			_, err = connectors.DBGetStocks(tt.Payload)
+			_, err = connectors.DBGetStocks(tt.Payload, true)
 		case "DBUpdateWatchlist":
 			connectors = NewTestClients(tt.FileName, 200)
 			_, err = connectors.DBUpdateWatchlist([]byte(tt.Payload))

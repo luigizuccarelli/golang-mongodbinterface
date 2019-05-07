@@ -75,25 +75,36 @@ func TestAllMiddleware(t *testing.T) {
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 		{
-			"[MiddlewareDBGetAllPublicationsByAffiliate] should pass",
+			"[MiddlewareDBGetPublicationsByAffiliate] should pass",
 			"POST",
 			"api/v1/affiliates/1",
 			"{\"username\": \"\",\"password\":\"\"}",
-			"MiddlewareDBGetAllPublicationsByAffiliate",
+			"MiddlewareDBGetPublicationsByAffiliate",
 			"tests/payload-example.json",
 			http.StatusOK,
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 		{
-			"[MiddlewareDBGetAllStocks] should pass",
+			"[MiddlewareDBGetAllStocksByAffiliate] should pass",
 			"POST",
-			"api/v1/stocks/1",
+			"api/v1/stocks/1/all",
 			"{\"username\": \"\",\"password\":\"\"}",
-			"MiddlewareDBGetAllStocks",
+			"MiddlewareDBGetAllStocksByAffiliate",
 			"tests/payload-example.json",
 			http.StatusOK,
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
+		{
+			"[MiddlewareDBGetAllStocksByPublication] should pass",
+			"POST",
+			"api/v1/stocks/1",
+			"{\"username\": \"\",\"password\":\"\"}",
+			"MiddlewareDBGetAllStocksByPublication",
+			"tests/payload-example.json",
+			http.StatusOK,
+			"Handler %s returned - got (%v) wanted (%v)",
+		},
+
 		{
 			"[MiddlewareMigrateData] should pass",
 			"POST",
@@ -184,8 +195,11 @@ func TestAllMiddleware(t *testing.T) {
 		case "MiddlewareDBGetAllPublicationsByAffiliate":
 			handler := http.HandlerFunc(MiddlewareDBGetAllPublicationsByAffiliate)
 			handler.ServeHTTP(rr, req)
-		case "MiddlewareDBGetAllStocks":
-			handler := http.HandlerFunc(MiddlewareDBGetAllStocks)
+		case "MiddlewareDBGetAllStocksByAffiliate":
+			handler := http.HandlerFunc(MiddlewareDBGetAllStocksByAffiliate)
+			handler.ServeHTTP(rr, req)
+		case "MiddlewareDBGetStocksByPublications":
+			handler := http.HandlerFunc(MiddlewareDBGetStocksByPublication)
 			handler.ServeHTTP(rr, req)
 		case "MiddlewareMigrateData":
 			handler := http.HandlerFunc(MiddlewareMigrateData)

@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/mux"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -69,7 +70,13 @@ func MiddlewareDBGetAllAffiliates(w http.ResponseWriter, r *http.Request) {
 	var response Response
 	var payload SchemaInterface
 
-	w.Header().Set(CONTENTTYPE, APPLICATIONJSON)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "")
+		return
+	}
+
+	addHeaders(w, r)
 	affiliates, err := connectors.DBGetAffiliates()
 	if err != nil {
 		response = Response{StatusCode: "500", Status: "ERROR", Message: "Indexing (MiddlewareDBGetAllAffiliates) " + err.Error(), Payload: payload}
@@ -91,7 +98,13 @@ func MiddlewareDBGetAllPublicationsByAffiliate(w http.ResponseWriter, r *http.Re
 	var payload SchemaInterface
 	vars := mux.Vars(r)
 
-	w.Header().Set(CONTENTTYPE, APPLICATIONJSON)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "")
+		return
+	}
+
+	addHeaders(w, r)
 	publications, err := connectors.DBGetPublications(vars["affiliateid"])
 	if err != nil {
 		response = Response{StatusCode: "500", Status: "ERROR", Message: "Indexing (MiddlewareDBGetAllPublicationsByAffiliate) " + err.Error(), Payload: payload}
@@ -105,22 +118,56 @@ func MiddlewareDBGetAllPublicationsByAffiliate(w http.ResponseWriter, r *http.Re
 	fmt.Fprintf(w, string(b))
 }
 
-// MiddlewareDBGetAllStocks a http response and request wrapper for stock data
+// MiddlewareDBGetStocksByPublication a http response and request wrapper for stock data
 // It takes a both response and request objects and returns void
-func MiddlewareDBGetAllStocks(w http.ResponseWriter, r *http.Request) {
+func MiddlewareDBGetStocksByPublication(w http.ResponseWriter, r *http.Request) {
 
 	var response Response
 	var payload SchemaInterface
 	vars := mux.Vars(r)
 
-	w.Header().Set(CONTENTTYPE, APPLICATIONJSON)
-	stocks, err := connectors.DBGetStocks(vars["publicationid"])
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "")
+		return
+	}
+
+	addHeaders(w, r)
+	stocks, err := connectors.DBGetStocks(vars["publicationid"], false)
 	if err != nil {
 		response = Response{StatusCode: "500", Status: "ERROR", Message: "Indexing (MiddlewareDBGetAllStocks) " + err.Error(), Payload: payload}
 		w.WriteHeader(http.StatusInternalServerError)
 	} else {
 		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database call to stocks " + vars["publicationid"], Stocks: stocks}
 		response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBGetAllStocks) successfull", Payload: payload}
+	}
+
+	b, _ := json.MarshalIndent(response, "", "	")
+	fmt.Fprintf(w, string(b))
+}
+
+// MiddlewareDBGetAllStocksByAffiliate a http response and request wrapper for stock data
+// It takes a both response and request objects and returns void
+func MiddlewareDBGetAllStocksByAffiliate(w http.ResponseWriter, r *http.Request) {
+
+	var response Response
+	var payload SchemaInterface
+	vars := mux.Vars(r)
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "")
+		return
+	}
+
+	addHeaders(w, r)
+	stocks, err := connectors.DBGetStocks(vars["affiliateid"], true)
+	if err != nil {
+		response = Response{StatusCode: "500", Status: "ERROR", Message: "Indexing (MiddlewareDBGetAllStocksByAffiliate) " + err.Error(), Payload: payload}
+		w.WriteHeader(http.StatusInternalServerError)
+	} else {
+		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database call to stocks " + vars["affiliateid"], Stocks: stocks}
+		response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBGetAllStocksByAffiliate) successfull", Payload: payload}
 	}
 
 	b, _ := json.MarshalIndent(response, "", "	")
@@ -134,7 +181,13 @@ func MiddlewareMigrateData(w http.ResponseWriter, r *http.Request) {
 	var response Response
 	var payload SchemaInterface
 
-	w.Header().Set(CONTENTTYPE, APPLICATIONJSON)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "")
+		return
+	}
+
+	addHeaders(w, r)
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		response = Response{StatusCode: "500", Status: "ERROR", Message: "Could not read body data (MiddlewareMigrateData) " + err.Error(), Payload: payload}
@@ -161,7 +214,13 @@ func MiddlewareUpdateSpecific(w http.ResponseWriter, r *http.Request) {
 	var response Response
 	var payload SchemaInterface
 
-	w.Header().Set(CONTENTTYPE, APPLICATIONJSON)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "")
+		return
+	}
+
+	addHeaders(w, r)
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		response = Response{StatusCode: "500", Status: "ERROR", Message: "Could not read body data (MiddlewareUpdateSpecific) " + err.Error(), Payload: payload}
@@ -188,8 +247,13 @@ func MiddlewareDBUpdateStockCurrentPrice(w http.ResponseWriter, r *http.Request)
 	var response Response
 	var payload SchemaInterface
 
-	w.Header().Set(CONTENTTYPE, APPLICATIONJSON)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "")
+		return
+	}
 
+	addHeaders(w, r)
 	e := connectors.DBUpdateStockCurrentPrice()
 	if e != nil {
 		response = Response{StatusCode: "500", Status: "ERROR", Message: "Data update (MiddlewareDBUpdateStockCurrentPrice) " + e.Error(), Payload: payload}
@@ -210,7 +274,13 @@ func MiddlewareDBUpdateStock(w http.ResponseWriter, r *http.Request) {
 	var response Response
 	var payload SchemaInterface
 
-	w.Header().Set(CONTENTTYPE, APPLICATIONJSON)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "")
+		return
+	}
+
+	addHeaders(w, r)
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		response = Response{StatusCode: "500", Status: "ERROR", Message: "Could not read body data (MiddlewareDBUpdateStock) " + err.Error(), Payload: payload}
@@ -230,9 +300,90 @@ func MiddlewareDBUpdateStock(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(b))
 }
 
+// MiddlewareDBGetWatchlist a http response and request wrapper for customer watchlist data
+// It takes a both response and request objects and returns void
+func MiddlewareDBGetWatchlist(w http.ResponseWriter, r *http.Request) {
+
+	var response Response
+	var payload SchemaInterface
+	vars := mux.Vars(r)
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "")
+		return
+	}
+
+	addHeaders(w, r)
+	wl, err := connectors.DBGetWatchlist(vars["customerid"])
+	if err != nil {
+		response = Response{StatusCode: "500", Status: "ERROR", Message: "Indexing (MiddlewareDBGetWatchlist) " + err.Error(), Payload: payload}
+		w.WriteHeader(http.StatusInternalServerError)
+	} else {
+		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database call for watchlist " + vars["customerid"], WatchList: wl}
+		response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBGetWatchlist) successfull", Payload: payload}
+	}
+
+	b, _ := json.MarshalIndent(response, "", "	")
+	fmt.Fprintf(w, string(b))
+}
+
+// MiddlewareDBUpdateWatchlist a http response and request wrapper to update the stock
+// It takes a both response and request objects and returns void
+func MiddlewareDBUpdateWatchlist(w http.ResponseWriter, r *http.Request) {
+
+	var response Response
+	var payload SchemaInterface
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "")
+		return
+	}
+
+	addHeaders(w, r)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		response = Response{StatusCode: "500", Status: "ERROR", Message: "Could not read body data (MiddlewareDBUpdateWatchlist) " + err.Error(), Payload: payload}
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+
+	wl, e := connectors.DBUpdateWatchlist(body)
+	if e != nil {
+		response = Response{StatusCode: "500", Status: "ERROR", Message: "Data update (MiddlewareDBUpdateWatchlist) " + e.Error(), Payload: payload}
+		w.WriteHeader(http.StatusInternalServerError)
+	} else {
+		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Watchlist update", WatchList: wl}
+		response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBUpdateWatchlist) successfull", Payload: payload}
+	}
+
+	b, _ := json.MarshalIndent(response, "", "	")
+	fmt.Fprintf(w, string(b))
+}
+
 func IsAlive(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set(CONTENTTYPE, APPLICATIONJSON)
+	addHeaders(w, r)
 	logger.Trace(fmt.Sprintf("used to mask cc %v", r))
 	logger.Trace(fmt.Sprintf("config data  %v", config))
 	fmt.Fprintf(w, "{\"isalive\": true , \"version\": \""+config.Version+"\"}")
+}
+
+// headers (with cors) utility
+func addHeaders(w http.ResponseWriter, r *http.Request) {
+	var request []string
+	for name, headers := range r.Header {
+		name = strings.ToLower(name)
+		for _, h := range headers {
+			request = append(request, fmt.Sprintf("%v: %v", name, h))
+		}
+	}
+
+	logger.Trace(fmt.Sprintf("Headers : %s", request))
+
+	w.Header().Set(CONTENTTYPE, APPLICATIONJSON)
+	// use this for cors
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+
 }

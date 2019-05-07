@@ -22,12 +22,14 @@ const (
 	DBGETAFFILIATES           string = "DBGetAffiliates"
 	DBGETPUBLICATIONS         string = "DBGetPublications"
 	DBGETSTOCKS               string = "DBGetStocks"
+	DBGETWATCHLIST            string = "DBGetWatchlist"
 	DBWATCHLIST               string = "DBUpdateWatchlist"
 	AFFILIATE                 string = "affiliate"
 	AFFILIATES                string = "affiliates"
 	AFFILIATEID               string = "affiliateid"
 	PUBLICATIONS              string = "publications"
 	PUBLICATIONID             string = "publicationid"
+	WATCHLIST                 string = "watchlist"
 	STOCKS                    string = "stocks"
 	SYMBOL                    string = "symbol"
 	MERGEDDATA                string = " : merged data"
@@ -91,12 +93,22 @@ func (c *Connectors) DBIndex() error {
 	}
 	collection = s.DB(config.MongoDB.DatabaseName).C(STOCKS)
 	index = mgo.Index{
-		Key: []string{"id", PUBLICATIONID, SYMBOL},
+		Key: []string{"id", PUBLICATIONID, SYMBOL, AFFILIATEID},
 	}
 	err = collection.EnsureIndex(index)
 	if err != nil {
 		return err
 	}
+
+	collection = s.DB(config.MongoDB.DatabaseName).C(WATCHLIST)
+	index = mgo.Index{
+		Key: []string{"customerid"},
+	}
+	err = collection.EnsureIndex(index)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -174,6 +186,7 @@ func (c *Connectors) DBMigrate(b []byte) error {
 		json.Unmarshal(body, &stocks)
 		for y, _ := range stocks {
 			stocks[y].PublicationId = publications[x].Id
+			stocks[y].AffiliateId = affiliate.Id
 			// check for duplicates , dont add to list if it exists
 			if _, value := keys[stocks[y].Symbol]; !value {
 				keys[stocks[y].Symbol] = true
@@ -527,7 +540,7 @@ func (c *Connectors) DBGetPublications(id string) ([]Publication, error) {
 	return publications, nil
 }
 
-func (c *Connectors) DBGetStocks(id string) ([]Stock, error) {
+func (c *Connectors) DBGetStocks(id string, all bool) ([]Stock, error) {
 
 	logger.Trace(DBGETSTOCKS)
 
@@ -540,11 +553,12 @@ func (c *Connectors) DBGetStocks(id string) ([]Stock, error) {
 	defer s.Close()
 	collection := s.DB(config.MongoDB.DatabaseName).C(STOCKS)
 	// first find the collection with the given ID
-	if id != "0" {
+	if !all {
 		publicationId, _ := strconv.Atoi(id)
 		query = bson.M{PUBLICATIONID: publicationId}
 	} else {
-		query = nil
+		affiliateId, _ := strconv.Atoi(id)
+		query = bson.M{AFFILIATEID: affiliateId}
 	}
 
 	// first find the collection with the given ID
@@ -563,6 +577,26 @@ func (c *Connectors) DBGetStocks(id string) ([]Stock, error) {
 
 	// all good
 	return stocks, nil
+}
+
+// DBGetWatchList
+func (c *Connectors) DBGetWatchlist(id string) (Watchlist, error) {
+
+	logger.Trace(DBGETWATCHLIST)
+
+	var data Watchlist
+	s := c.session.Clone()
+	defer s.Close()
+	collection := s.DB(config.MongoDB.DatabaseName).C(WATCHLIST)
+	query := bson.M{"CustomerId": id}
+
+	// first find the collection with the given ID
+	err := collection.FindId(query).One(&data)
+	if err != nil {
+		return data, err
+	}
+	logger.Debug(fp(DBGETWATCHLIST+" : from database", data))
+	return data, nil
 }
 
 // DBUpdateWatchlist

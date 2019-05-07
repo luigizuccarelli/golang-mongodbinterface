@@ -1,6 +1,6 @@
 {
     "version": "1.0.0",
-    "port": "9000",
+    "port": "9002",
     "level": "debug",
     "url": "https://publishers.tradesmith.com/api/",
     "quoteurl": "https://www.alphavantage.co/query?function=",
