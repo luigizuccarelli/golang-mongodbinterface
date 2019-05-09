@@ -1,5 +1,6 @@
 bin/microservice
 bin/config.json
 conf/config.json
+config.json
 
 

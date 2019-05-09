@@ -32,7 +32,7 @@ func startHttpServer(cfg Config) *http.Server {
 	r.HandleFunc("/api/v1/affiliates", MiddlewareDBGetAllAffiliates).Methods("GET")
 	r.HandleFunc("/api/v1/publications/{affiliateid}", MiddlewareDBGetAllPublicationsByAffiliate).Methods("OPTIONS", "GET")
 	r.HandleFunc("/api/v1/stocks/{publicationid}", MiddlewareDBGetStocksByPublication).Methods("OPTIONS", "GET")
-	r.HandleFunc("/api/v1/stocks/{affiliateid}/all", MiddlewareDBGetAllStocksByAffiliate).Methods("OPTIONS", "GET")
+	r.HandleFunc("/api/v1/stocks/affiliate/{affiliateid}", MiddlewareDBGetAllStocksByAffiliate).Methods("OPTIONS", "GET")
 	r.HandleFunc("/api/v1/stocks/{bsonid}", MiddlewareDBUpdateStock).Methods("OPTIONS", "POST", "PUT")
 	r.HandleFunc("/api/v1/watchlist/{customerid}", MiddlewareDBGetWatchlist).Methods("OPTIONS", "GET")
 	r.HandleFunc("/api/v1/watchlist/{bsonid}", MiddlewareDBUpdateWatchlist).Methods("OPTIONS", "PUT", "POST")

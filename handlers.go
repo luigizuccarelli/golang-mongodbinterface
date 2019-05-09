@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -41,6 +42,8 @@ func fp(msg string, obj interface{}) string {
 	return fmt.Sprintf(MSGFORMAT, msg, obj)
 }
 
+// DBSetup this function saves the affiliate data
+// It takes in a byte array and returns an error
 func (c *Connectors) DBSetup(b []byte) error {
 	// This function must be run before DBMigrate
 	// initial check TBD
@@ -70,6 +73,8 @@ func (c *Connectors) DBSetup(b []byte) error {
 	return nil
 }
 
+// DBIndex this function indexes the various collections
+// It has void paramaters and returns an error
 func (c *Connectors) DBIndex() error {
 
 	logger.Trace("DBIndex")
@@ -331,7 +336,8 @@ func (c *Connectors) DBUpdateAffiliateSpecific(b []byte) error {
 					// update the fields we are interested in
 					stock.Buy = tss[y].Buy
 					stock.Stop = tss[y].Stop
-					stock.Recommendation = tss[y].Recommendation.Info
+					// golang does not like % in a string - some cleanup is needed
+					stock.Recommendation = strings.Replace(tss[y].Recommendation.Info, "%", " percent", -1)
 					stock.Status = tss[y].Status
 
 					// update the merged data
@@ -418,7 +424,7 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error {
 	return nil
 }
 
-// DBUpdateStock
+// DBUpdateStock - it does what it says :)
 // It takes a byte array and returns both the Stock array and error objects
 func (c *Connectors) DBUpdateStock(body []byte) ([]Stock, error) {
 
@@ -478,6 +484,8 @@ func (c *Connectors) DBUpdateStock(body []byte) ([]Stock, error) {
 	return stocks, nil
 }
 
+// DBGetAffiliates - get a list of all affiliates
+// It has void parameters and returns an affiliate schema array
 func (c *Connectors) DBGetAffiliates() ([]Affiliate, error) {
 
 	logger.Trace(DBGETAFFILIATES)
@@ -507,6 +515,8 @@ func (c *Connectors) DBGetAffiliates() ([]Affiliate, error) {
 	return affiliates, nil
 }
 
+// DBGetPublications - get a list of all publications
+// It has a string id parameter (publication id) and returns a publication schema array
 func (c *Connectors) DBGetPublications(id string) ([]Publication, error) {
 
 	logger.Trace(DBGETPUBLICATIONS)
@@ -540,6 +550,8 @@ func (c *Connectors) DBGetPublications(id string) ([]Publication, error) {
 	return publications, nil
 }
 
+// DBGetStocks - get a list of stocks by publication or  affiliate
+// It has a string id parameter (publication or affiliate id) , a boolean if set true returns all stocks for an affiliate
 func (c *Connectors) DBGetStocks(id string, all bool) ([]Stock, error) {
 
 	logger.Trace(DBGETSTOCKS)
@@ -565,6 +577,8 @@ func (c *Connectors) DBGetStocks(id string, all bool) ([]Stock, error) {
 	iter := collection.Find(query).Sort(SYMBOL).Iter()
 
 	for iter.Next(&data) {
+		str := strings.Replace(data.Recommendation, "%", " percent", -1)
+		data.Recommendation = str
 		logger.Trace(fp(DBGETSTOCKS+DATA, data))
 		stocks = append(stocks, data)
 	}
@@ -579,7 +593,8 @@ func (c *Connectors) DBGetStocks(id string, all bool) ([]Stock, error) {
 	return stocks, nil
 }
 
-// DBGetWatchList
+// DBGetWatchList - this function returns a watchlist for a specific client
+// It takes a string id parameter and returns a watchlist schema
 func (c *Connectors) DBGetWatchlist(id string) (Watchlist, error) {
 
 	logger.Trace(DBGETWATCHLIST)

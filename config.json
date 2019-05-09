@@ -1,10 +1,11 @@
 {
-    "version": "1.0.0",
+    "version": "1.0.1",
     "port": "9002",
-    "level": "debug",
-    "url": "https://publishers.tradesmith.com/api/",
-    "quoteurl": "https://www.alphavantage.co/query?function=",
-    "token": "FIPYVWW7UKT5583E",
+    "level": "info",
+    "url": "https://www.alphavantage.co/query?function=",
+    "microservice": "http://dbmicroservice:9000",
+    "tokenold": "FIPYVWW7UKT5583E",
+    "token": "6ED3G0GS5A5A41AO",
     "mongodb" : {
       "host": "127.0.0.1",
       "port": "27017",
@@ -15,7 +16,8 @@
       "adminpwd": "admin"
     },
     "redisdb" : {
-      "host": "127.0.0.1",
-      "port": "6379"
+      "host": "192.168.1.80",
+      "port": "6379",
+      "password": "pt"
     }
 }

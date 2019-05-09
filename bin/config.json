@@ -2,10 +2,10 @@
     "version": "1.0.1",
     "port": "9000",
     "level": "info",
-    "url": "https://www.alphavantage.co/query?function=",
+    "url": "https://publishers.tradesmith.com/api/",
+    "quoteurl": "https://www.alphavantage.co/query?function=",
     "microservice": "http://dbmicroservice:9000",
-    "tokenold": "FIPYVWW7UKT5583E",
-    "token": "6ED3G0GS5A5A41AO",
+    "token": "VVEIRAW4U5WHFOV3",
     "mongodb" : {
       "host": "mongodb.portfoliotracker.svc",
       "port": "27017",
