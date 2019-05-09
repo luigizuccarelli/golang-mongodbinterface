@@ -639,14 +639,10 @@ func (c *Connectors) DBUpdateWatchlist(body []byte) (Watchlist, error) {
 	// collection publications
 	collection := s.DB(config.MongoDB.DatabaseName).C("watchlist")
 
-	// check the bson id - the payload must include the id - its not taken from the query string
-	f := bson.IsObjectIdHex(data.UID.Hex())
-	if !f {
-		return data, errors.New(DBWATCHLIST + " bson ObjectId not valid")
-	}
+	query := bson.M{"customerid": data.CustomerId}
 
 	// first find the collection with the given ID
-	err := collection.FindId(data.UID).One(&existing)
+	err := collection.FindId(query).One(&existing)
 	if err != nil {
 		// no record found lets insert
 		logger.Debug(fp(DBWATCHLIST+" : no record found inserting into database", data))
