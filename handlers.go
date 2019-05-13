@@ -638,8 +638,13 @@ func (c *Connectors) DBGetWatchlist(id string) (Watchlist, error) {
 	// first find the collection with the given ID
 	err := collection.Find(query).One(&data)
 	if err != nil {
-		logger.Error(fp(DBWATCHLIST+" "+id, err.Error()))
-		return data, err
+		if strings.Index(err.Error(), "not found") != -1 {
+			logger.Warn(fp(DBWATCHLIST+" "+id, err.Error()))
+			return data, nil
+		} else {
+			logger.Error(fp(DBWATCHLIST+" "+id, err.Error()))
+			return data, err
+		}
 	}
 	logger.Debug(fp(DBGETWATCHLIST+" : from database", data))
 	return data, nil
