@@ -35,8 +35,9 @@ func startHttpServer(cfg Config) *http.Server {
 	r.HandleFunc("/api/v1/stocks/affiliate/{affiliateid}", MiddlewareDBGetAllStocksByAffiliate).Methods("OPTIONS", "GET")
 	r.HandleFunc("/api/v1/stocks/{bsonid}", MiddlewareDBUpdateStock).Methods("OPTIONS", "POST", "PUT")
 	r.HandleFunc("/api/v1/watchlist/{customerid}", MiddlewareDBGetWatchlist).Methods("OPTIONS", "GET")
-	r.HandleFunc("/api/v1/watchlist/{bsonid}", MiddlewareDBUpdateWatchlist).Methods("OPTIONS", "PUT", "POST")
+	r.HandleFunc("/api/v1/watchlist/{customerid}", MiddlewareDBUpdateWatchlist).Methods("OPTIONS", "PUT", "POST")
 	r.HandleFunc("/api/v1/prices", MiddlewareDBUpdateStockCurrentPrice).Methods("POST")
+	r.HandleFunc("/api/v1/pricestatus", MiddlewarePriceStatus).Methods("GET")
 	http.Handle("/", r)
 
 	connectors = NewClientConnectors(cfg)

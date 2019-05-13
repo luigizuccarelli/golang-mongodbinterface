@@ -39,8 +39,9 @@ type Mongodb struct {
 }
 
 type Redis struct {
-	Host string `json:"host"`
-	Port string `json:"port"`
+	Host     string `json:"host"`
+	Port     string `json:"port"`
+	Password string `json:"password"`
 }
 
 type Affiliate struct {
@@ -74,7 +75,7 @@ type Stock struct {
 
 type Watchlist struct {
 	UID        bson.ObjectId `json:"_id" bson:"_id,omitempty"`
-	CustomerID string        `json:"customerid"`
+	CustomerId int           `json:"customerid"`
 	Stocks     []string      `json:"stocks"`
 }
 
@@ -92,7 +93,7 @@ type PositionSetting struct {
 }
 
 // alpha advantage GLOBAL_QUOTE struct
-type AlphaAdvantage struct {
+type Alphavantage struct {
 	GlobalQuote struct {
 		Symbol           string `json:"01. symbol"`
 		Open             string `json:"02. open"`

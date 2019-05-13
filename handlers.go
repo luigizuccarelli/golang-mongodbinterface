@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -187,7 +188,7 @@ func (c *Connectors) DBMigrate(b []byte) error {
 			logger.Error(fp(DBMIGRATE, err.Error()))
 			return err
 		}
-		logger.Info(fmt.Sprintf("DBMigrate json data from url %s", string(body)))
+		logger.Debug(fmt.Sprintf("DBMigrate json data from url %s", string(body)))
 		json.Unmarshal(body, &stocks)
 		for y, _ := range stocks {
 			stocks[y].PublicationId = publications[x].Id
@@ -367,60 +368,88 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error {
 
 	logger.Trace(DBUPDATESTOCKCURRENTPRICE)
 
-	var stockprice AlphaAdvantage
+	var stockprice Alphavantage
 	var stocks []Stock
 	var stock Stock
+	var bErr bool = false
 
-	// do lookup to get affiliate token on DB
-	s := c.session.Clone()
-	defer s.Close()
-	collection := s.DB(config.MongoDB.DatabaseName).C(STOCKS)
+	// update redis to indicate stockupdate fro prices is pending
+	c.Set(DBUPDATESTOCKCURRENTPRICE, "pending", 60*time.Minute)
 
-	// find the stocks
-	iter := collection.Find(nil).Sort(SYMBOL).Iter()
+	go func() {
 
-	for iter.Next(&stock) {
-		logger.Trace(fp(DBUPDATESTOCKCURRENTPRICE+DATA, stock))
-		stocks = append(stocks, stock)
-	}
-	if iter.Err() != nil {
-		logger.Error(fp(DBUPDATESTOCKCURRENTPRICE+DATA, iter.Err()))
+		// do lookup to get affiliate token on DB
+		s := c.session.Clone()
+		defer s.Close()
+		collection := s.DB(config.MongoDB.DatabaseName).C(STOCKS)
+
+		// find the stocks
+		iter := collection.Find(nil).Sort(SYMBOL).Iter()
+
+		for iter.Next(&stock) {
+			logger.Trace(fp(DBUPDATESTOCKCURRENTPRICE+DATA, stock))
+			stocks = append(stocks, stock)
+		}
+		if iter.Err() != nil {
+			logger.Error(fp(DBUPDATESTOCKCURRENTPRICE+DATA, iter.Err()))
+			iter.Close()
+			return
+		}
 		iter.Close()
-		return iter.Err()
-	}
-	iter.Close()
 
-	// iterate through each stock
-	for x, _ := range stocks {
+		// iterate through each stock
+		for x, _ := range stocks {
 
-		// Get the latest stock data
-		req, err := http.NewRequest("GET", config.QuoteUrl+"GLOBAL_QUOTE&symbol="+stocks[x].Symbol+"&apikey="+config.Token, nil)
-		resp, err := c.http.Do(req)
-		logger.Info(fp(DBUPDATESTOCKCURRENTPRICE, config.QuoteUrl))
-		if err != nil || resp.StatusCode != 200 {
-			// just log the error - this is not a critical error
-			logger.Error(fp(DBUPDATESTOCKCURRENTPRICE, err.Error()))
+			// Get the latest stock data
+			req, err := http.NewRequest("GET", config.QuoteUrl+"GLOBAL_QUOTE&symbol="+stocks[x].Symbol+"&apikey="+config.Token, nil)
+			resp, err := c.http.Do(req)
+			logger.Debug(fp(DBUPDATESTOCKCURRENTPRICE, config.QuoteUrl))
+			logger.Info(fp(DBUPDATESTOCKCURRENTPRICE+"Retrieving stock price for ", stocks[x].Symbol))
+			if err != nil || resp.StatusCode != 200 {
+				// just log the error - this is not a critical error
+				logger.Error(fp(DBUPDATESTOCKCURRENTPRICE, err.Error()))
+				bErr = true
+			}
+
+			defer resp.Body.Close()
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				logger.Error(fp(DBUPDATESTOCKCURRENTPRICE, err.Error()))
+				bErr = true
+			}
+			e := json.Unmarshal(body, &stockprice)
+			if e != nil {
+				logger.Error(fp(DBUPDATESTOCKCURRENTPRICE, e.Error()))
+				bErr = true
+			}
+			logger.Info(fp(DBUPDATESTOCKCURRENTPRICE+"Stock from alphavantage ", stockprice))
+
+			if stockprice == (Alphavantage{}) {
+				stocks[x].Status = -1
+			} else {
+				stocks[x].Last, _ = strconv.ParseFloat(stockprice.GlobalQuote.Price, 64)
+				stocks[x].Change, _ = strconv.ParseFloat(stockprice.GlobalQuote.ChangePercent[:len(stockprice.GlobalQuote.ChangePercent)-1], 64)
+			}
+
+			query := bson.M{"_id": bson.ObjectIdHex(stocks[x].UID.Hex())}
+			logger.Debug(fp(DBUPDATESTOCKCURRENTPRICE+MERGEDDATA, stocks[x]))
+			e = collection.Update(query, stocks[x])
+			if e != nil {
+				logger.Error(fp(DBUPDATESTOCKCURRENTPRICE+MERGEDDATA, e.Error()))
+				bErr = true
+			}
+			stockprice = Alphavantage{}
 		}
 
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			logger.Error(fp(DBUPDATESTOCKCURRENTPRICE, err.Error()))
+		if !bErr {
+			// update redis to indicate end with success
+			c.Set(DBUPDATESTOCKCURRENTPRICE, "OK", 12*time.Hour)
+		} else {
+			// update redis to indicate end with failure
+			c.Set(DBUPDATESTOCKCURRENTPRICE, "KO", 12*time.Hour)
 		}
-		e := json.Unmarshal(body, &stockprice)
-		if e != nil {
-			logger.Error(fp(DBUPDATESTOCKCURRENTPRICE, e.Error()))
-		}
+	}()
 
-		stocks[x].Last, _ = strconv.ParseFloat(stockprice.GlobalQuote.Price, 64)
-		stocks[x].Change, _ = strconv.ParseFloat(stockprice.GlobalQuote.ChangePercent[:len(stockprice.GlobalQuote.ChangePercent)-1], 64)
-		query := bson.M{"_id": bson.ObjectIdHex(stocks[x].UID.Hex())}
-		logger.Debug(fp(DBUPDATESTOCKCURRENTPRICE+MERGEDDATA, stocks[x]))
-		e = collection.Update(query, stocks[x])
-		if e != nil {
-			logger.Error(fp(DBUPDATESTOCKCURRENTPRICE+MERGEDDATA, e.Error()))
-		}
-	}
 	return nil
 }
 
@@ -597,17 +626,19 @@ func (c *Connectors) DBGetStocks(id string, all bool) ([]Stock, error) {
 // It takes a string id parameter and returns a watchlist schema
 func (c *Connectors) DBGetWatchlist(id string) (Watchlist, error) {
 
-	logger.Trace(DBGETWATCHLIST)
+	logger.Debug(DBGETWATCHLIST + " " + id)
 
 	var data Watchlist
 	s := c.session.Clone()
 	defer s.Close()
 	collection := s.DB(config.MongoDB.DatabaseName).C(WATCHLIST)
-	query := bson.M{"CustomerId": id}
+	customerId, _ := strconv.Atoi(id)
+	query := bson.M{"customerid": customerId}
 
 	// first find the collection with the given ID
-	err := collection.FindId(query).One(&data)
+	err := collection.Find(query).One(&data)
 	if err != nil {
+		logger.Error(fp(DBWATCHLIST+" "+id, err.Error()))
 		return data, err
 	}
 	logger.Debug(fp(DBGETWATCHLIST+" : from database", data))
@@ -642,7 +673,7 @@ func (c *Connectors) DBUpdateWatchlist(body []byte) (Watchlist, error) {
 	query := bson.M{"customerid": data.CustomerId}
 
 	// first find the collection with the given ID
-	err := collection.FindId(query).One(&existing)
+	err := collection.Find(query).One(&existing)
 	if err != nil {
 		// no record found lets insert
 		logger.Debug(fp(DBWATCHLIST+" : no record found inserting into database", data))
@@ -670,7 +701,7 @@ func (c *Connectors) DBUpdateWatchlist(body []byte) (Watchlist, error) {
 		}
 
 		// update the merged structs
-		query := bson.M{"_id": bson.ObjectIdHex(data.UID.Hex())}
+		// query := bson.M{"_id": bson.ObjectIdHex(data.UID.Hex())}
 		logger.Debug(fp(DBWATCHLIST+MERGEDDATA, existing))
 		e = collection.Update(query, existing)
 		if e != nil {
@@ -681,4 +712,11 @@ func (c *Connectors) DBUpdateWatchlist(body []byte) (Watchlist, error) {
 
 	// all good
 	return existing, nil
+}
+
+// GetPriceStatus - get the current price update status update
+// It has a void parameter and returns string
+func (c *Connectors) GetPriceStatus() (string, error) {
+	val, _ := c.Get(DBUPDATESTOCKCURRENTPRICE)
+	return val, nil
 }

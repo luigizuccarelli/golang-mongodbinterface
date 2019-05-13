@@ -21,6 +21,7 @@ type Clients interface {
 	DBUpdateStockCurrentPrice() error
 	DBUpdateWatchlist(body []byte) (Watchlist, error)
 	DBGetWatchlist(id string) (Watchlist, error)
+	GetPriceStatus() (string, error)
 	Get(string) (string, error)
 	Set(string, string, time.Duration) (string, error)
 	Close() error
@@ -58,7 +59,19 @@ func NewClientConnectors(cfg Config) Clients {
 	s.SetMode(mgo.Monotonic, true)
 	logger.Trace(fmt.Sprintf("Mongodb connection successful %v ", s))
 
-	return &Connectors{http: httpClient, session: s, name: "RealConnectors"}
+	// connect to redis
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:         cfg.RedisDB.Host + ":" + cfg.RedisDB.Port,
+		DialTimeout:  10 * time.Second,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		PoolSize:     10,
+		PoolTimeout:  30 * time.Second,
+		Password:     cfg.RedisDB.Password,
+		DB:           0,
+	})
+
+	return &Connectors{http: httpClient, redis: redisClient, session: s, name: "RealConnectors"}
 }
 
 func (r *Connectors) Get(key string) (string, error) {
