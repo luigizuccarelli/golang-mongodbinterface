@@ -1,6 +1,16 @@
-{
-  "_id": "",
-  "id": 1,
-  "name": "test",
-  "affiliateid": "1" 
-}
+[
+  {
+    "_id": "",
+    "id": 1,
+    "name": "test1",
+    "affiliateid": "1" 
+  }, 
+  {
+    "_id": "",
+    "id": 2,
+    "name": "test2",
+    "affiliateid": "1" 
+
+  }
+]
+

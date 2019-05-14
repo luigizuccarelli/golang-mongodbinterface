@@ -1,0 +1,23 @@
+[
+   {
+    "symbol": "TST",
+    "openprice": 2.0,
+    "stopprice": 3.0,
+    "tradestatus": 1, 
+    "positionsetting" : {
+      "text1": "Hello",
+      "text2": "Test"
+    }
+  },
+  {
+    "symbol": "TST2",
+    "openprice": 3.0,
+    "stopprice": 5.0,
+    "tradestatus": 1, 
+    "positionsetting" : {
+      "text1": "Hello Test3",
+      "text2": "Test3"
+    }
+  }
+]
+

@@ -1,0 +1,16 @@
+
+   {
+    "Global Quote": {
+      "01. symbol": "TST",
+      "02. open": "123",
+      "03. high": "456",
+      "04. low": "789",
+      "05. price": "123",
+      "06. volume": "1234",
+      "07. latest trading day": "567",
+      "08. previous close": "891",
+      "09. change": "123",
+      "10. change percent": "45%"
+    }
+  }
+

@@ -75,11 +75,11 @@ func TestAllMiddleware(t *testing.T) {
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 		{
-			"[MiddlewareDBGetPublicationsByAffiliate] should pass",
+			"[MiddlewareDBGetAllPublicationsByAffiliate] should pass",
 			"POST",
 			"api/v1/affiliates/1",
-			"{\"username\": \"\",\"password\":\"\"}",
-			"MiddlewareDBGetPublicationsByAffiliate",
+			"{\"affiliateid\": \"\",\"2\":\"\"}",
+			"MiddlewareDBGetAllPublicationsByAffiliate",
 			"tests/payload-example.json",
 			http.StatusOK,
 			"Handler %s returned - got (%v) wanted (%v)",
@@ -95,11 +95,11 @@ func TestAllMiddleware(t *testing.T) {
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 		{
-			"[MiddlewareDBGetAllStocksByPublication] should pass",
+			"[MiddlewareDBGetStocksByPublication] should pass",
 			"POST",
 			"api/v1/stocks/1",
 			"{\"username\": \"\",\"password\":\"\"}",
-			"MiddlewareDBGetAllStocksByPublication",
+			"MiddlewareDBGetStocksByPublication",
 			"tests/payload-example.json",
 			http.StatusOK,
 			"Handler %s returned - got (%v) wanted (%v)",
@@ -131,7 +131,7 @@ func TestAllMiddleware(t *testing.T) {
 			"api/v1/migrate",
 			"{\"id\": 1, \"name\":\"Test\",\"token\": \"sdasdsafsfdgdfgf\"}",
 			"MiddlewareUpdateSpecific",
-			"tests/payload-example.json",
+			"tests/tss.json",
 			http.StatusOK,
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
@@ -141,7 +141,7 @@ func TestAllMiddleware(t *testing.T) {
 			"api/v1/stocks",
 			"",
 			"MiddlewareDBUpdateStockCurrentPrice",
-			"tests/payload-example.json",
+			"tests/tss.json",
 			http.StatusOK,
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
@@ -163,6 +163,36 @@ func TestAllMiddleware(t *testing.T) {
 			"MiddlewareDBUpdateStock",
 			"tests/payload-example.json",
 			http.StatusInternalServerError,
+			"Handler %s returned - got (%v) wanted (%v)",
+		},
+		{
+			"[MiddlewareDBGetWatchlist] should pass",
+			"POST",
+			"api/v1/stocks",
+			"{\"_id\": \"na\", \"name\":\"Test\",\"token\": \"sdasdsafsfdgdfgf\"}",
+			"MiddlewareDBGetWatchlist",
+			"tests/payload-example.json",
+			http.StatusOK,
+			"Handler %s returned - got (%v) wanted (%v)",
+		},
+		{
+			"[MiddlewareDBUpdateWatchlist] should pass",
+			"POST",
+			"api/v1/watchlist",
+			"{\"_id\": \"5cc042307ccc69ada893144c\", \"customerid\":13223,\"stocks\": [\"ABC\",\"DEF\"]}",
+			"MiddlewareDBUpdateWatchlist",
+			"tests/payload-example.json",
+			http.StatusOK,
+			"Handler %s returned - got (%v) wanted (%v)",
+		},
+		{
+			"[MiddlewarePriceStatus] should pass",
+			"GET",
+			"api/v1/pricestatus",
+			"",
+			"MiddlewarePriceStatus",
+			"tests/payload-example.json",
+			http.StatusOK,
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 	}
@@ -198,7 +228,7 @@ func TestAllMiddleware(t *testing.T) {
 		case "MiddlewareDBGetAllStocksByAffiliate":
 			handler := http.HandlerFunc(MiddlewareDBGetAllStocksByAffiliate)
 			handler.ServeHTTP(rr, req)
-		case "MiddlewareDBGetStocksByPublications":
+		case "MiddlewareDBGetStocksByPublication":
 			handler := http.HandlerFunc(MiddlewareDBGetStocksByPublication)
 			handler.ServeHTTP(rr, req)
 		case "MiddlewareMigrateData":
@@ -213,6 +243,15 @@ func TestAllMiddleware(t *testing.T) {
 		case "MiddlewareDBUpdateStock":
 			handler := http.HandlerFunc(MiddlewareDBUpdateStock)
 			handler.ServeHTTP(rr, req)
+		case "MiddlewareDBGetWatchlist":
+			handler := http.HandlerFunc(MiddlewareDBGetWatchlist)
+			handler.ServeHTTP(rr, req)
+		case "MiddlewareDBUpdateWatchlist":
+			handler := http.HandlerFunc(MiddlewareDBUpdateWatchlist)
+			handler.ServeHTTP(rr, req)
+		case "MiddlewarePriceStatus":
+			handler := http.HandlerFunc(MiddlewarePriceStatus)
+			handler.ServeHTTP(rr, req)
 		}
 		// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 		// directly and pass in our Request and ResponseRecorder.
@@ -220,7 +259,6 @@ func TestAllMiddleware(t *testing.T) {
 		if e != nil {
 			t.Fatalf(fmt.Sprintf(tt.errorMsg, tt.Handler, "nil", "error"))
 		}
-		fmt.Println(fmt.Sprintf("Response %s", string(body)))
 		// ignore errors here
 		json.Unmarshal(body, &response)
 		_ = response.Payload.MetaInfo

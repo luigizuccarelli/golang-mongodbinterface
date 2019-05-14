@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/microlib/simple"
+	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
 	"net/http"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -17,6 +19,7 @@ var (
 	logger     simple.Logger
 	config     Config
 	connectors Clients
+	counter    int = 0
 )
 
 type Clients interface {
@@ -31,6 +34,7 @@ type Clients interface {
 	DBUpdateStockCurrentPrice() error
 	DBUpdateWatchlist(body []byte) (Watchlist, error)
 	DBGetWatchlist(string) (Watchlist, error)
+	GetPriceStatus() (string, error)
 	Get(string) (string, error)
 	Set(string, string, time.Duration) (string, error)
 	Close() error
@@ -195,6 +199,12 @@ func (fq FakeQuery) All(result interface{}) error {
 
 // One fake.
 func (fq FakeQuery) One(result interface{}) error {
+	if reflect.TypeOf(result).String() == "*main.Stock" {
+		*result.(*Stock) = Stock{UID: bson.ObjectIdHex("5cc042307ccc69ada893144c"), PublicationId: 123, AffiliateId: 1, RefId: 1, Symbol: "TST", Name: "TestSymbol", Buy: 2.0, Stop: 1.0, Last: 3.0, Change: 23.0, Recommendation: "Sell", Status: 1}
+	}
+	if reflect.TypeOf(result).String() == "*main.Watchlist" {
+		*result.(*Watchlist) = Watchlist{UID: bson.ObjectIdHex("5cc042307ccc69ada893144c"), CustomerId: 123, Stocks: []string{}}
+	}
 	return nil
 }
 
@@ -219,6 +229,24 @@ func (fq FakeQuery) Sort(field interface{}) Iterator {
 }
 
 func (fi FakeIterObject) Next(data interface{}) bool {
+	counter++
+	if reflect.TypeOf(data).String() == "*main.Publication" {
+		*data.(*Publication) = Publication{Id: 1, Name: "Test1", AffiliateId: 1}
+		if counter > 2 {
+			counter = 0
+			return false
+		} else {
+			return true
+		}
+	} else if reflect.TypeOf(data).String() == "*main.Stock" {
+		*data.(*Stock) = Stock{UID: bson.ObjectIdHex("5cc042307ccc69ada893144c"), PublicationId: 123, AffiliateId: 1, RefId: 1, Symbol: "TST", Name: "TestSymbol", Buy: 2.0, Stop: 1.0, Last: 3.0, Change: 23.0, Recommendation: "Sell", Status: 1}
+		if counter > 2 {
+			counter = 0
+			return false
+		} else {
+			return true
+		}
+	}
 	return false
 }
 
@@ -245,6 +273,14 @@ func NewHttpTestClient(fn RoundTripFunc) *http.Client {
 }
 
 func NewTestClients(data string, code int) Clients {
+
+	// read the config
+	logger.Level = "info"
+
+	// initialise our store (cache)
+	store = make(map[string]string)
+	// in initialise the store
+	store[DBUPDATESTOCKCURRENTPRICE] = "test"
 
 	// we first load the json payload to simulate a call to middleware
 	// for now just ignore failures.
@@ -275,12 +311,6 @@ func assertEqual(t *testing.T, a interface{}, b interface{}) {
 
 func TestAll(t *testing.T) {
 
-	// read the config
-	logger.Level = "trace"
-
-	// initialise our store (cache)
-	store = map[string]string{"stock": ""}
-
 	// create anonymous struct
 	tests := []struct {
 		Name     string
@@ -302,7 +332,7 @@ func TestAll(t *testing.T) {
 			"DBSetup should fail",
 			`[{"test":"]`,
 			"DBSetup",
-			"tests/payload-example.json",
+			"tests/tss.json",
 			true,
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
@@ -310,7 +340,7 @@ func TestAll(t *testing.T) {
 			"DBIndex should pass",
 			"[{\"id\": 1, \"name\":\"Test\",\"token\": \"sdasdsafsfdgdfgf\"}]",
 			"DBIndex",
-			"tests/payload-example.json",
+			"tests/tss.json",
 			false,
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
@@ -326,7 +356,7 @@ func TestAll(t *testing.T) {
 			"DBMigrate should fail",
 			`{"test":"`,
 			"DBMigrate",
-			"tests/payload-example.json",
+			"tests/publication.json",
 			true,
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
@@ -334,7 +364,7 @@ func TestAll(t *testing.T) {
 			"DBUpdateAffiliateSpecific should pass",
 			"{\"id\": 1, \"affiliate\":\"Test\"}",
 			"DBUpdateAffiliateSpecific",
-			"tests/payload-example.json",
+			"tests/tss.json",
 			false,
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
@@ -342,7 +372,7 @@ func TestAll(t *testing.T) {
 			"DBUpdateAffiliateSpecific should fail",
 			`{"test":"`,
 			"DBUpdateAffiliateSpecific",
-			"tests/payload-example.json",
+			"tests/alphavantage.json",
 			true,
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
@@ -350,7 +380,7 @@ func TestAll(t *testing.T) {
 			"DBUpdateStockCurrentPrice should pass",
 			"{\"id\": 1, \"affiliate\":\"Test\"}",
 			"DBUpdateStockCurrentPrice",
-			"tests/payload-example.json",
+			"tests/alphavantage.json",
 			false,
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
@@ -358,7 +388,7 @@ func TestAll(t *testing.T) {
 			"DBUpdateStock should pass",
 			"{\"_id\": \"5cc042307ccc69ada893144c\"}",
 			"DBUpdateStock",
-			"tests/payload-example.json",
+			"tests/tss.json",
 			false,
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
@@ -366,7 +396,7 @@ func TestAll(t *testing.T) {
 			"DBUpdateStock should fail",
 			`{"test":"`,
 			"DBUpdateStock",
-			"tests/payload-example.json",
+			"tests/tss.json",
 			true,
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
@@ -406,39 +436,27 @@ func TestAll(t *testing.T) {
 			"DBUpdateWatchlist should pass",
 			"{\"_id\": \"5cc042307ccc69ada893144c\", \"affiliate\":\"Test\"}",
 			"DBUpdateWatchlist",
+			"tests/publication.json",
+			false,
+			"Handler %s returned - got (%v) wanted (%v)",
+		},
+		{
+			"DBGetWatchlist should pass",
+			"1",
+			"DBGetWatchlist",
 			"tests/payload-example.json",
 			false,
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 		{
-			"DBUpdateWatchlist should pass",
-			"{ \"test\": ",
-			"DBUpdateWatchlist",
-			"tests/payload-example.json",
-			true,
+			"GetPriceStatus should pass",
+			"",
+			"GetPriceStatus",
+			"tests/publication.json",
+			false,
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 	}
-
-	/*
-	  tests := []struct {
-			Name     string
-			Payload  string
-			Handler  string
-			FileName string
-			want     bool
-			errorMsg string
-		}{
-			{
-				"DBMigrate should pass",
-				"{\"id\": 1, \"affiliate\":\"Test\"}",
-				"DBMigrate",
-				"tests/publication.json",
-				false,
-				"Handler %s returned - got (%v) wanted (%v)",
-			},
-		}
-	*/
 
 	var err error
 	for _, tt := range tests {
@@ -475,6 +493,12 @@ func TestAll(t *testing.T) {
 		case "DBUpdateWatchlist":
 			connectors = NewTestClients(tt.FileName, 200)
 			_, err = connectors.DBUpdateWatchlist([]byte(tt.Payload))
+		case "DBGetWatchlist":
+			connectors = NewTestClients(tt.FileName, 200)
+			_, err = connectors.DBGetWatchlist(tt.Payload)
+		case "GetPriceStatus":
+			connectors = NewTestClients(tt.FileName, 200)
+			_, err = connectors.GetPriceStatus()
 		}
 
 		if !tt.want {

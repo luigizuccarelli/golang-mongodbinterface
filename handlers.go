@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -38,6 +39,8 @@ const (
 	DATA                      string = " : data"
 	CLONE                     string = "Session clone"
 )
+
+var lock = sync.RWMutex{}
 
 func fp(msg string, obj interface{}) string {
 	return fmt.Sprintf(MSGFORMAT, msg, obj)
@@ -334,6 +337,7 @@ func (c *Connectors) DBUpdateAffiliateSpecific(b []byte) error {
 					if err != nil {
 						return err
 					}
+					logger.Info(fp(DBUPDATEAFFILIATESPECIFIC+" Stocks ", stock))
 					// update the fields we are interested in
 					stock.Buy = tss[y].Buy
 					stock.Stop = tss[y].Stop
@@ -374,6 +378,8 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error {
 	var bErr bool = false
 
 	// update redis to indicate stockupdate fro prices is pending
+	lock.Lock()
+	defer lock.Unlock()
 	c.Set(DBUPDATESTOCKCURRENTPRICE, "pending", 60*time.Minute)
 
 	go func() {
@@ -440,6 +446,9 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error {
 			}
 			stockprice = Alphavantage{}
 		}
+
+		lock.Lock()
+		defer lock.Unlock()
 
 		if !bErr {
 			// update redis to indicate end with success
@@ -722,6 +731,8 @@ func (c *Connectors) DBUpdateWatchlist(body []byte) (Watchlist, error) {
 // GetPriceStatus - get the current price update status update
 // It has a void parameter and returns string
 func (c *Connectors) GetPriceStatus() (string, error) {
+	lock.RLock()
+	defer lock.RUnlock()
 	val, _ := c.Get(DBUPDATESTOCKCURRENTPRICE)
 	return val, nil
 }

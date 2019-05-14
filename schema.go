@@ -82,7 +82,7 @@ type Watchlist struct {
 type TradeSmithSchema struct {
 	Symbol         string          `json:"symbol"`
 	Buy            float64         `json:"openprice"`
-	Stop           float64         `json:"stoprice"`
+	Stop           float64         `json:"stopprice"`
 	Status         int             `json:"tradestatus"`
 	Recommendation PositionSetting `json:"positionsetting"`
 }
