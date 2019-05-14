@@ -2,5 +2,5 @@ projectKey=portfoliotracker-stocks-dbinterface
 serverUrl=http://localhost:9009
 serverVersion=7.7.0.23042
 dashboardUrl=http://localhost:9009/dashboard?id=portfoliotracker-stocks-dbinterface
-ceTaskId=AWpudxocCymPbuYrZC7o
-ceTaskUrl=http://localhost:9009/api/ce/task?id=AWpudxocCymPbuYrZC7o
+ceTaskId=AWq254syaCv7ATx0d8ia
+ceTaskUrl=http://localhost:9009/api/ce/task?id=AWq254syaCv7ATx0d8ia

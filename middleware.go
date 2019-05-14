@@ -25,14 +25,12 @@ func MiddlewareDBSetup(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set(CONTENTTYPE, APPLICATIONJSON)
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		response = Response{StatusCode: "500", Status: "ERROR", Message: "Could not read body data (MiddlewareDBSetup) " + err.Error(), Payload: payload}
-		w.WriteHeader(http.StatusInternalServerError)
+		response = handleError(w, "Could not read body data (MiddlewareDBSetup) "+err.Error(), payload)
 	}
 
 	err = connectors.DBSetup(body)
 	if err != nil {
-		response = Response{StatusCode: "500", Status: "ERROR", Message: "Data migrate (MiddlewareDBSetup) " + err.Error(), Payload: payload}
-		w.WriteHeader(http.StatusInternalServerError)
+		response = handleError(w, "Data migrate (MiddlewareDBSetup) "+err.Error(), payload)
 	} else {
 		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database setup"}
 		response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBSetup) successfull", Payload: payload}
@@ -52,8 +50,7 @@ func MiddlewareDBIndex(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set(CONTENTTYPE, APPLICATIONJSON)
 	err := connectors.DBIndex()
 	if err != nil {
-		response = Response{StatusCode: "500", Status: "ERROR", Message: "Indexing (MiddlewareDBIndex) " + err.Error(), Payload: payload}
-		w.WriteHeader(http.StatusInternalServerError)
+		response = handleError(w, "Indexing (MiddlewareDBIndex) "+err.Error(), payload)
 	} else {
 		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database index"}
 		response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBIndex) successfull", Payload: payload}
@@ -71,17 +68,11 @@ func MiddlewareDBGetAllAffiliates(w http.ResponseWriter, r *http.Request) {
 	var payload SchemaInterface
 
 	addHeaders(w, r)
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "")
-		return
-	}
+	handleOptions(w, r)
 
 	affiliates, err := connectors.DBGetAffiliates()
 	if err != nil {
-		response = Response{StatusCode: "500", Status: "ERROR", Message: "Indexing (MiddlewareDBGetAllAffiliates) " + err.Error(), Payload: payload}
-		w.WriteHeader(http.StatusInternalServerError)
+		response = handleError(w, "Indexing (MiddlewareDBGetAllAffiliates) "+err.Error(), payload)
 	} else {
 		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database call to affiliates", Affiliates: affiliates}
 		response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBGetAllAffiliates) successfull", Payload: payload}
@@ -100,17 +91,11 @@ func MiddlewareDBGetAllPublicationsByAffiliate(w http.ResponseWriter, r *http.Re
 	vars := mux.Vars(r)
 
 	addHeaders(w, r)
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "")
-		return
-	}
+	handleOptions(w, r)
 
 	publications, err := connectors.DBGetPublications(vars["affiliateid"])
 	if err != nil {
-		response = Response{StatusCode: "500", Status: "ERROR", Message: "Indexing (MiddlewareDBGetAllPublicationsByAffiliate) " + err.Error(), Payload: payload}
-		w.WriteHeader(http.StatusInternalServerError)
+		response = handleError(w, "Indexing (MiddlewareDBGetAllPublicationsByAffiliate) "+err.Error(), payload)
 	} else {
 		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database call to publications for affiliate " + vars["affiliateid"], Publications: publications}
 		response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBGetAllPublicationsByAffiliate) successfull", Payload: payload}
@@ -129,17 +114,11 @@ func MiddlewareDBGetStocksByPublication(w http.ResponseWriter, r *http.Request) 
 	vars := mux.Vars(r)
 
 	addHeaders(w, r)
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "")
-		return
-	}
+	handleOptions(w, r)
 
 	stocks, err := connectors.DBGetStocks(vars["publicationid"], false)
 	if err != nil {
-		response = Response{StatusCode: "500", Status: "ERROR", Message: "Indexing (MiddlewareDBGetAllStocks) " + err.Error(), Payload: payload}
-		w.WriteHeader(http.StatusInternalServerError)
+		response = handleError(w, "Indexing (MiddlewareDBGetAllStocks) "+err.Error(), payload)
 	} else {
 		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database call to stocks " + vars["publicationid"], Stocks: stocks}
 		response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBGetAllStocks) successfull", Payload: payload}
@@ -158,17 +137,11 @@ func MiddlewareDBGetAllStocksByAffiliate(w http.ResponseWriter, r *http.Request)
 	vars := mux.Vars(r)
 
 	addHeaders(w, r)
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "")
-		return
-	}
+	handleOptions(w, r)
 
 	stocks, err := connectors.DBGetStocks(vars["affiliateid"], true)
 	if err != nil {
-		response = Response{StatusCode: "500", Status: "ERROR", Message: "Indexing (MiddlewareDBGetAllStocksByAffiliate) " + err.Error(), Payload: payload}
-		w.WriteHeader(http.StatusInternalServerError)
+		response = handleError(w, "Indexing (MiddlewareDBGetAllStocksByAffiliate) "+err.Error(), payload)
 	} else {
 		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database call to stocks " + vars["affiliateid"], Stocks: stocks}
 		response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBGetAllStocksByAffiliate) successfull", Payload: payload}
@@ -186,23 +159,16 @@ func MiddlewareMigrateData(w http.ResponseWriter, r *http.Request) {
 	var payload SchemaInterface
 
 	addHeaders(w, r)
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "")
-		return
-	}
+	handleOptions(w, r)
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		response = Response{StatusCode: "500", Status: "ERROR", Message: "Could not read body data (MiddlewareMigrateData) " + err.Error(), Payload: payload}
-		w.WriteHeader(http.StatusInternalServerError)
+		response = handleError(w, "Could not read body data (MiddlewareMigrateData) "+err.Error(), payload)
 	}
 
 	err = connectors.DBMigrate(body)
 	if err != nil {
-		response = Response{StatusCode: "500", Status: "ERROR", Message: "Data migrate (MiddlewareMigrateData) " + err.Error(), Payload: payload}
-		w.WriteHeader(http.StatusInternalServerError)
+		response = handleError(w, "Data migrate (MiddlewareMigrateData) "+err.Error(), payload)
 	} else {
 		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Affiliate data (publication and stocks)"}
 		response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareMigrateData) successfull", Payload: payload}
@@ -220,23 +186,16 @@ func MiddlewareUpdateSpecific(w http.ResponseWriter, r *http.Request) {
 	var payload SchemaInterface
 
 	addHeaders(w, r)
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "")
-		return
-	}
+	handleOptions(w, r)
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		response = Response{StatusCode: "500", Status: "ERROR", Message: "Could not read body data (MiddlewareUpdateSpecific) " + err.Error(), Payload: payload}
-		w.WriteHeader(http.StatusInternalServerError)
+		response = handleError(w, "Could not read body data (MiddlewareUpdateSpecific) "+err.Error(), payload)
 	}
 
 	err = connectors.DBUpdateAffiliateSpecific(body)
 	if err != nil {
-		response = Response{StatusCode: "500", Status: "ERROR", Message: "Data specific update (MiddlewareUpdateSpecific) " + err.Error(), Payload: payload}
-		w.WriteHeader(http.StatusInternalServerError)
+		response = handleError(w, "Data specific update (MiddlewareUpdateSpecific) "+err.Error(), payload)
 	} else {
 		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Update of affiliate specific data for all associated stocks"}
 		response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareUpdateSpecific) successfull", Payload: payload}
@@ -254,17 +213,11 @@ func MiddlewareDBUpdateStockCurrentPrice(w http.ResponseWriter, r *http.Request)
 	var payload SchemaInterface
 
 	addHeaders(w, r)
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "")
-		return
-	}
+	handleOptions(w, r)
 
 	e := connectors.DBUpdateStockCurrentPrice()
 	if e != nil {
-		response = Response{StatusCode: "500", Status: "ERROR", Message: "Data update (MiddlewareDBUpdateStockCurrentPrice) " + e.Error(), Payload: payload}
-		w.WriteHeader(http.StatusInternalServerError)
+		response = handleError(w, "Data update (MiddlewareDBUpdateStockCurrentPrice) "+e.Error(), payload)
 	} else {
 		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Stock update from API Status : PENDING"}
 		response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBUpdateStockCurrentPrice) status : PENDING", Payload: payload}
@@ -282,23 +235,16 @@ func MiddlewareDBUpdateStock(w http.ResponseWriter, r *http.Request) {
 	var payload SchemaInterface
 
 	addHeaders(w, r)
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "")
-		return
-	}
+	handleOptions(w, r)
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		response = Response{StatusCode: "500", Status: "ERROR", Message: "Could not read body data (MiddlewareDBUpdateStock) " + err.Error(), Payload: payload}
-		w.WriteHeader(http.StatusInternalServerError)
+		response = handleError(w, "Could not read body data (MiddlewareDBUpdateStock) "+err.Error(), payload)
 	}
 
 	st, e := connectors.DBUpdateStock(body)
 	if e != nil {
-		response = Response{StatusCode: "500", Status: "ERROR", Message: "Data update (MiddlewareDBUpdateStock) " + e.Error(), Payload: payload}
-		w.WriteHeader(http.StatusInternalServerError)
+		response = handleError(w, "Data update (MiddlewareDBUpdateStock) "+e.Error(), payload)
 	} else {
 		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Stock update", Stocks: st}
 		response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBUpdateStock) successfull", Payload: payload}
@@ -317,17 +263,11 @@ func MiddlewareDBGetWatchlist(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
 	addHeaders(w, r)
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "")
-		return
-	}
+	handleOptions(w, r)
 
 	wl, err := connectors.DBGetWatchlist(vars["customerid"])
 	if err != nil {
-		response = Response{StatusCode: "500", Status: "ERROR", Message: "Querying (MiddlewareDBGetWatchlist) " + err.Error(), Payload: payload}
-		w.WriteHeader(http.StatusInternalServerError)
+		response = handleError(w, "Querying (MiddlewareDBGetWatchlist) "+err.Error(), payload)
 	} else {
 		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database call for watchlist " + vars["customerid"], WatchList: wl}
 		response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBGetWatchlist) successfull", Payload: payload}
@@ -345,23 +285,16 @@ func MiddlewareDBUpdateWatchlist(w http.ResponseWriter, r *http.Request) {
 	var payload SchemaInterface
 
 	addHeaders(w, r)
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "")
-		return
-	}
+	handleOptions(w, r)
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		response = Response{StatusCode: "500", Status: "ERROR", Message: "Could not read body data (MiddlewareDBUpdateWatchlist) " + err.Error(), Payload: payload}
-		w.WriteHeader(http.StatusInternalServerError)
+		response = handleError(w, "Could not read body data (MiddlewareDBUpdateWatchlist)"+err.Error(), payload)
 	}
 
 	wl, e := connectors.DBUpdateWatchlist(body)
 	if e != nil {
-		response = Response{StatusCode: "500", Status: "ERROR", Message: "Data update (MiddlewareDBUpdateWatchlist) " + e.Error(), Payload: payload}
-		w.WriteHeader(http.StatusInternalServerError)
+		response = handleError(w, "Data update (MiddlewareDBUpdateWatchlist) "+e.Error(), payload)
 	} else {
 		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Watchlist update", WatchList: wl}
 		response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBUpdateWatchlist) successfull", Payload: payload}
@@ -378,11 +311,28 @@ func MiddlewarePriceStatus(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "{\"status\": \""+val+"\"}\n")
 }
 
+// IsAlive - liveliness and readiness probe check
 func IsAlive(w http.ResponseWriter, r *http.Request) {
 	addHeaders(w, r)
 	logger.Trace(fmt.Sprintf("used to mask cc %v", r))
 	logger.Trace(fmt.Sprintf("config data  %v", config))
 	fmt.Fprintf(w, "{\"isalive\": true , \"version\": \""+config.Version+"\"}\n")
+}
+
+// simple options handler
+func handleOptions(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "")
+	}
+	return
+}
+
+// simple error handler
+func handleError(w http.ResponseWriter, msg string, s SchemaInterface) Response {
+	w.WriteHeader(http.StatusInternalServerError)
+	r := Response{StatusCode: "500", Status: "ERROR", Message: msg, Payload: s}
+	return r
 }
 
 // headers (with cors) utility
