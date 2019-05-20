@@ -1,4 +1,4 @@
-!/bin/sh
+#!/bin/sh
 
 if [ "$1" = "compile" ]
 then
@@ -16,12 +16,12 @@ fi
 if [ "$1" = "test" ]
 then
     echo -e "\nExecuting golang unit tests"
-    GOCACHE=off go test -v config.go config_test.go schema.go handlers.go middleware.go middleware_test.go handlers_test.go -coverprofile tests/results/cover.out
+    go test -v config.go config_test.go schema.go handlers.go middleware.go middleware_test.go handlers_test.go -coverprofile tests/results/cover.out
     go tool cover -html=tests/results/cover.out -o tests/results/cover.html
 fi
 
 if [ "$1" = "sonarqube" ]
 then
     echo -e "\nSonarqube scanning project"
-    sonarqube/bin/sonar-scanner  -Dsonar.projectKey=portfoliotracker-stocks-dbinterface  -Dsonar.sources=.   -Dsonar.host.url=http://sonarqube-service:9009   -Dsonar.login=c24cdce3d9d3a38680f16a0f069ef90421884eeb -Dsonar.go.coverage.reportPaths=tests/results/cover.out -Dsonar.exclusions=vendor/**,*_test.go,main.go,connectors.go,tests/**
+    /sonarqube/bin/sonar-scanner  -Dsonar.projectKey=portfoliotracker-stocks-dbinterface  -Dsonar.sources=.   -Dsonar.host.url=http://sonarqube-service:9000   -Dsonar.login=c24cdce3d9d3a38680f16a0f069ef90421884eeb -Dsonar.go.coverage.reportPaths=tests/results/cover.out -Dsonar.exclusions=vendor/**,*_test.go,main.go,connectors.go,tests/**
 fi
