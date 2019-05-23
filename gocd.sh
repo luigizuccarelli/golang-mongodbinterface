@@ -25,3 +25,15 @@ then
     echo -e "\nSonarqube scanning project"
     /sonarqube/bin/sonar-scanner  -Dsonar.projectKey=portfoliotracker-stocks-dbinterface  -Dsonar.sources=.   -Dsonar.host.url=http://sonarqube-service:9000  -Dsonar.login=$2 -Dsonar.go.coverage.reportPaths=tests/results/cover.out -Dsonar.exclusions=vendor/**,*_test.go,main.go,connectors.go,tests/**
 fi
+
+if [ "$1" = "image" ]
+then
+    echo -e "\nBuilding container image"
+    buildah -f Dockerfile -t $2/$3:$3
+fi
+
+if [ "$1" = "push" ]
+then
+    echo -e "\nPushing image to registry"
+    buildah push $2/$3:$3
+fi
