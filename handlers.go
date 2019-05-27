@@ -379,10 +379,10 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error {
 	var stock Stock
 	var bErr bool = false
 
-	// update redis to indicate stockupdate fro prices is pending
+	// update redis to indicate stockupdate for prices is pending
+	c.Set(DBUPDATESTOCKCURRENTPRICE, "pending", 3600*time.Second)
 	lock.Lock()
 	defer lock.Unlock()
-	c.Set(DBUPDATESTOCKCURRENTPRICE, "pending", 60*time.Minute)
 
 	go func() {
 
@@ -450,15 +450,15 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error {
 			stockprice = Alphavantage{}
 		}
 
-		lock.Lock()
-		defer lock.Unlock()
+		//lock.Unlock()
+		//defer lock.Unlock()
 
 		if !bErr {
 			// update redis to indicate end with success
-			c.Set(DBUPDATESTOCKCURRENTPRICE, "OK", 12*time.Hour)
+			c.Set(DBUPDATESTOCKCURRENTPRICE, "OK", 43200*time.Second)
 		} else {
 			// update redis to indicate end with failure
-			c.Set(DBUPDATESTOCKCURRENTPRICE, "KO", 12*time.Hour)
+			c.Set(DBUPDATESTOCKCURRENTPRICE, "KO", 43200*time.Second)
 		}
 	}()
 
@@ -608,10 +608,10 @@ func (c *Connectors) DBGetStocks(id string, all bool) ([]Stock, error) {
 	// first find the collection with the given ID
 	if !all {
 		publicationId, _ := strconv.Atoi(id)
-		query = bson.M{PUBLICATIONID: publicationId}
+		query = bson.M{PUBLICATIONID: publicationId, "status": 1}
 	} else {
 		affiliateId, _ := strconv.Atoi(id)
-		query = bson.M{AFFILIATEID: affiliateId}
+		query = bson.M{AFFILIATEID: affiliateId, "status": 1}
 	}
 
 	// first find the collection with the given ID

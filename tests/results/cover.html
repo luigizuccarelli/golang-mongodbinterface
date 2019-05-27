@@ -56,7 +56,7 @@
 				
 				<option value="file0">/home/lzuccarelli/Projects/portfolio-tracker/portfoliotracker-stocks-dbinterface/config.go (98.0%)</option>
 				
-				<option value="file1">/home/lzuccarelli/Projects/portfolio-tracker/portfoliotracker-stocks-dbinterface/handlers.go (79.2%)</option>
+				<option value="file1">/home/lzuccarelli/Projects/portfolio-tracker/portfoliotracker-stocks-dbinterface/handlers.go (79.1%)</option>
 				
 				<option value="file2">/home/lzuccarelli/Projects/portfolio-tracker/portfoliotracker-stocks-dbinterface/middleware.go (89.1%)</option>
 				
@@ -580,10 +580,10 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error <span class="cov8" title=
         var stock Stock
         var bErr bool = false
 
-        // update redis to indicate stockupdate fro prices is pending
+        // update redis to indicate stockupdate for prices is pending
+        c.Set(DBUPDATESTOCKCURRENTPRICE, "pending", 3600*time.Second)
         lock.Lock()
         defer lock.Unlock()
-        c.Set(DBUPDATESTOCKCURRENTPRICE, "pending", 60*time.Minute)
 
         go func() </span><span class="cov8" title="1">{
 
@@ -651,15 +651,15 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error <span class="cov8" title=
                         <span class="cov8" title="1">stockprice = Alphavantage{}</span>
                 }
 
-                <span class="cov8" title="1">lock.Lock()
-                defer lock.Unlock()
+                //lock.Unlock()
+                //defer lock.Unlock()
 
-                if !bErr </span><span class="cov8" title="1">{
+                <span class="cov8" title="1">if !bErr </span><span class="cov8" title="1">{
                         // update redis to indicate end with success
-                        c.Set(DBUPDATESTOCKCURRENTPRICE, "OK", 12*time.Hour)
+                        c.Set(DBUPDATESTOCKCURRENTPRICE, "OK", 43200*time.Second)
                 }</span> else<span class="cov8" title="1"> {
                         // update redis to indicate end with failure
-                        c.Set(DBUPDATESTOCKCURRENTPRICE, "KO", 12*time.Hour)
+                        c.Set(DBUPDATESTOCKCURRENTPRICE, "KO", 43200*time.Second)
                 }</span>
         }()
 
@@ -809,10 +809,10 @@ func (c *Connectors) DBGetStocks(id string, all bool) ([]Stock, error) <span cla
         // first find the collection with the given ID
         if !all </span><span class="cov8" title="1">{
                 publicationId, _ := strconv.Atoi(id)
-                query = bson.M{PUBLICATIONID: publicationId}
+                query = bson.M{PUBLICATIONID: publicationId, "status": 1}
         }</span> else<span class="cov8" title="1"> {
                 affiliateId, _ := strconv.Atoi(id)
-                query = bson.M{AFFILIATEID: affiliateId}
+                query = bson.M{AFFILIATEID: affiliateId, "status": 1}
         }</span>
 
         // first find the collection with the given ID

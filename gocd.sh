@@ -44,5 +44,5 @@ then
     oc login --server=$2 --username=$3 --password=$4 --insecure-skip-tls-verify
     oc project portfoliotracker
     oc delete pod $5
-    echo - e "\nPod is re-deploying use oc status or oc get pods -w" 
+    echo -e "\nPod is re-deploying use oc status or oc get pods -w" 
 fi
