@@ -3,21 +3,33 @@
     "symbol": "TST",
     "openprice": 2.0,
     "stopprice": 3.0,
-    "tradestatus": 1, 
+    "tradestatus": 1,
+    "currencysign": "$", 
     "positionsetting" : {
       "text1": "Hello",
       "text2": "Test"
-    }
+    },
+    "subtrades" : [{
+      "subtradesetting": {
+        "smartstop": 24.5
+      }
+    }]
   },
   {
     "symbol": "TST2",
     "openprice": 3.0,
     "stopprice": 5.0,
     "tradestatus": 1, 
+    "currencysign": "$", 
     "positionsetting" : {
       "text1": "Hello Test3",
       "text2": "Test3"
-    }
+    },
+    "subtrades" : [{
+      "subtradesetting": {
+        "smartstop": 24.5
+      }
+    }]
   }
 ]
 

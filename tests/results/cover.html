@@ -56,7 +56,7 @@
 				
 				<option value="file0">/home/lzuccarelli/Projects/portfolio-tracker/portfoliotracker-stocks-dbinterface/config.go (98.0%)</option>
 				
-				<option value="file1">/home/lzuccarelli/Projects/portfolio-tracker/portfoliotracker-stocks-dbinterface/handlers.go (79.1%)</option>
+				<option value="file1">/home/lzuccarelli/Projects/portfolio-tracker/portfoliotracker-stocks-dbinterface/handlers.go (79.2%)</option>
 				
 				<option value="file2">/home/lzuccarelli/Projects/portfolio-tracker/portfoliotracker-stocks-dbinterface/middleware.go (89.1%)</option>
 				
@@ -236,6 +236,7 @@ const (
         WATCHLIST                 string = "watchlist"
         STOCKS                    string = "stocks"
         SYMBOL                    string = "symbol"
+        STATUS                    string = "status"
         MERGEDDATA                string = " : merged data"
         DATA                      string = " : data"
         CLONE                     string = "Session clone"
@@ -303,7 +304,7 @@ func (c *Connectors) DBIndex() error <span class="cov8" title="1">{
         }</span>
         <span class="cov8" title="1">collection = s.DB(config.MongoDB.DatabaseName).C(STOCKS)
         index = mgo.Index{
-                Key: []string{"id", PUBLICATIONID, SYMBOL, AFFILIATEID},
+                Key: []string{"id", PUBLICATIONID, SYMBOL, AFFILIATEID, STATUS},
         }
         err = collection.EnsureIndex(index)
         if err != nil </span><span class="cov0" title="0">{
@@ -541,10 +542,11 @@ func (c *Connectors) DBUpdateAffiliateSpecific(b []byte) error <span class="cov8
                                         <span class="cov8" title="1">logger.Info(fp(DBUPDATEAFFILIATESPECIFIC+" Stocks ", stock))
                                         // update the fields we are interested in
                                         stock.Buy = tss[y].Buy
-                                        stock.Stop = tss[y].Stop
+                                        stock.Stop = tss[y].SubTrades[0].SubstradeSetting.Stop
                                         // golang does not like % in a string - some cleanup is needed
                                         stock.Recommendation = strings.Replace(tss[y].Recommendation.Info, "%", " percent", -1)
                                         stock.Status = tss[y].Status
+                                        stock.CurrencySign = tss[y].CurrencySign
 
                                         // update the merged data
                                         query = bson.M{"_id": bson.ObjectIdHex(stock.UID.Hex())}
@@ -590,8 +592,9 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error <span class="cov8" title=
                 defer s.Close()
                 collection := s.DB(config.MongoDB.DatabaseName).C(STOCKS)
 
+                query := bson.M{"status": 1}
                 // find the stocks
-                iter := collection.Find(nil).Sort(SYMBOL).Iter()
+                iter := collection.Find(query).Sort(SYMBOL).Iter()
 
                 for iter.Next(&amp;stock) </span><span class="cov8" title="1">{
                         logger.Trace(fp(DBUPDATESTOCKCURRENTPRICE+DATA, stock))

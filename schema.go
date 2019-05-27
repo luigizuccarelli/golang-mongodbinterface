@@ -44,6 +44,14 @@ type Redis struct {
 	Password string `json:"password"`
 }
 
+type Subtrades struct {
+	SubstradeSetting `json:"subtradesetting"`
+}
+
+type SubstradeSetting struct {
+	Stop float64 `json:"smartstop"`
+}
+
 type Affiliate struct {
 	UID   bson.ObjectId `json:"_id" bson:"_id,omitempty"`
 	Id    int           `json:"id"`
@@ -71,6 +79,7 @@ type Stock struct {
 	Change         float64       `json:"change"`
 	Recommendation string        `json:"recommendation"`
 	Status         int           `json:"status"`
+	CurrencySign   string        `json:"currencysign"`
 }
 
 type Watchlist struct {
@@ -82,9 +91,10 @@ type Watchlist struct {
 type TradeSmithSchema struct {
 	Symbol         string          `json:"symbol"`
 	Buy            float64         `json:"openprice"`
-	Stop           float64         `json:"stopprice"`
+	SubTrades      []Subtrades     `json:"subtrades"`
 	Status         int             `json:"tradestatus"`
 	Recommendation PositionSetting `json:"positionsetting"`
+	CurrencySign   string          `json:"currencysygn"`
 }
 
 type PositionSetting struct {

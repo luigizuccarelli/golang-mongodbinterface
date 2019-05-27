@@ -35,6 +35,7 @@ const (
 	WATCHLIST                 string = "watchlist"
 	STOCKS                    string = "stocks"
 	SYMBOL                    string = "symbol"
+	STATUS                    string = "status"
 	MERGEDDATA                string = " : merged data"
 	DATA                      string = " : data"
 	CLONE                     string = "Session clone"
@@ -102,7 +103,7 @@ func (c *Connectors) DBIndex() error {
 	}
 	collection = s.DB(config.MongoDB.DatabaseName).C(STOCKS)
 	index = mgo.Index{
-		Key: []string{"id", PUBLICATIONID, SYMBOL, AFFILIATEID},
+		Key: []string{"id", PUBLICATIONID, SYMBOL, AFFILIATEID, STATUS},
 	}
 	err = collection.EnsureIndex(index)
 	if err != nil {
@@ -340,10 +341,11 @@ func (c *Connectors) DBUpdateAffiliateSpecific(b []byte) error {
 					logger.Info(fp(DBUPDATEAFFILIATESPECIFIC+" Stocks ", stock))
 					// update the fields we are interested in
 					stock.Buy = tss[y].Buy
-					stock.Stop = tss[y].Stop
+					stock.Stop = tss[y].SubTrades[0].SubstradeSetting.Stop
 					// golang does not like % in a string - some cleanup is needed
 					stock.Recommendation = strings.Replace(tss[y].Recommendation.Info, "%", " percent", -1)
 					stock.Status = tss[y].Status
+					stock.CurrencySign = tss[y].CurrencySign
 
 					// update the merged data
 					query = bson.M{"_id": bson.ObjectIdHex(stock.UID.Hex())}
@@ -389,8 +391,9 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error {
 		defer s.Close()
 		collection := s.DB(config.MongoDB.DatabaseName).C(STOCKS)
 
+		query := bson.M{"status": 1}
 		// find the stocks
-		iter := collection.Find(nil).Sort(SYMBOL).Iter()
+		iter := collection.Find(query).Sort(SYMBOL).Iter()
 
 		for iter.Next(&stock) {
 			logger.Trace(fp(DBUPDATESTOCKCURRENTPRICE+DATA, stock))

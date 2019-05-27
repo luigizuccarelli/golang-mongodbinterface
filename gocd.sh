@@ -35,7 +35,7 @@ fi
 if [ "$1" = "push" ]
 then
     echo -e "\nPushing image to registry"
-    docker push push $2/$3:$3
+    docker push $2/$3:$4
 fi
 
 if [ "$1" = "deploy" ]
@@ -43,6 +43,6 @@ then
     echo -e "\nDeploying to openshift"
     oc login --server=$2 --username=$3 --password=$4 --insecure-skip-tls-verify
     oc project portfoliotracker
-    #oc delete pod $5
+    oc delete pod $5
     echo - e "\nPod is re-deploying use oc status or oc get pods -w" 
 fi
