@@ -23,7 +23,7 @@ fi
 if [ "$1" = "sonarqube" ]
 then
     echo -e "\nSonarqube scanning project"
-    /sonarqube/bin/sonar-scanner  -Dsonar.projectKey=portfoliotracker-stocks-dbinterface  -Dsonar.sources=.   -Dsonar.host.url=http://sonarqube-service:9000  -Dsonar.login=$2 -Dsonar.go.coverage.reportPaths=tests/results/cover.out -Dsonar.exclusions=vendor/**,*_test.go,main.go,connectors.go,tests/**
+    /sonarqube/bin/sonar-scanner  -Dsonar.projectKey=myportfolio-stocks-dbinterface  -Dsonar.sources=.   -Dsonar.host.url=http://sonarqube-service:9000  -Dsonar.login=$2 -Dsonar.go.coverage.reportPaths=tests/results/cover.out -Dsonar.exclusions=vendor/**,*_test.go,main.go,connectors.go,tests/**
 fi
 
 if [ "$1" = "image" ]
