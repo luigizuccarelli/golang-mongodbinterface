@@ -35,6 +35,7 @@ fi
 if [ "$1" = "push" ]
 then
     echo -e "\nPushing image to registry"
+    docker login -u ${REGISTRYUSER} -p ${REGISTRYPASSWORD}
     docker push $2/$3:$4
 fi
 
