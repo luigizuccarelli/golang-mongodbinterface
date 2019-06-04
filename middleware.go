@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/mux"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -144,6 +145,74 @@ func MiddlewareDBGetAllStocksByAffiliate(w http.ResponseWriter, r *http.Request)
 		response = handleError(w, "Indexing (MiddlewareDBGetAllStocksByAffiliate) "+err.Error(), payload)
 	} else {
 		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database call to stocks " + vars["affiliateid"], Stocks: stocks}
+		response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBGetAllStocksByAffiliate) successfull", Payload: payload}
+	}
+
+	b, _ := json.MarshalIndent(response, "", "	")
+	fmt.Fprintf(w, string(b))
+}
+
+// MiddlewareDBGetAllStocksCount a http response and request wrapper for stock data
+// It takes a both response and request objects and returns void
+func MiddlewareDBGetAllStocksCount(w http.ResponseWriter, r *http.Request) {
+
+	var response Response
+	var payload SchemaInterface
+	vars := mux.Vars(r)
+
+	addHeaders(w, r)
+	handleOptions(w, r)
+
+	count, err := connectors.DBGetStocksCount(vars["affiliateid"])
+	if err != nil {
+		response = handleError(w, "Count (MiddlewareDBGetAllStocksCount) "+err.Error(), payload)
+	} else {
+		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Stocks count for affiliateid " + vars["affiliateid"] + ":" + strconv.Itoa(count)}
+		response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBGetAllStocksCount) successfull", Payload: payload}
+	}
+
+	b, _ := json.MarshalIndent(response, "", "	")
+	fmt.Fprintf(w, string(b))
+}
+
+// MiddlewareDBGetAllStocksByAffiliatePaginated a http response and request wrapper for stock data
+// It takes a both response and request objects and returns void
+func MiddlewareDBGetAllStocksByAffiliatePaginated(w http.ResponseWriter, r *http.Request) {
+
+	var response Response
+	var payload SchemaInterface
+	var totalPages int64 = 0
+	var limit, skip int
+	vars := mux.Vars(r)
+
+	addHeaders(w, r)
+	handleOptions(w, r)
+
+	offset := r.URL.Query().Get("offset")
+	page := r.URL.Query().Get("perpage")
+
+	count, err := connectors.DBGetStocksCount(vars["affiliateid"])
+	if page != "" && offset != "" {
+		total, _ := strconv.Atoi(page)
+		totalPages = int64(count / total)
+		skip, _ = strconv.Atoi(offset)
+		limit, _ = strconv.Atoi(page)
+	} else {
+		totalPages = (int64(count) / 10)
+		skip = 0
+		limit = count
+	}
+	stocks, err := connectors.DBGetStocksPaginated(vars["affiliateid"], skip, limit)
+	if err != nil {
+		response = handleError(w, "Paginated stocks (MiddlewareDBGetAllStocksByAffiliate) "+err.Error(), payload)
+	} else {
+		payload = SchemaInterface{
+			LastUpdate: time.Now().Unix(),
+			MetaInfo:   "MiddlewareDBGetAllStocksByAffiliate for affiliateId " + vars["affiliateid"],
+			Count:      int64(count),
+			TotalPages: totalPages,
+			Stocks:     stocks,
+		}
 		response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBGetAllStocksByAffiliate) successfull", Payload: payload}
 	}
 

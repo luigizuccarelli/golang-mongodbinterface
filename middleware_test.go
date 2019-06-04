@@ -195,6 +195,26 @@ func TestAllMiddleware(t *testing.T) {
 			http.StatusOK,
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
+		{
+			"[MiddlewareDBGetAllStocksCount] should pass",
+			"GET",
+			"api/v1/pricestatus",
+			"",
+			"MiddlewareDBGetAllStocksCount",
+			"tests/payload-example.json",
+			http.StatusOK,
+			"Handler %s returned - got (%v) wanted (%v)",
+		},
+		{
+			"[MiddlewareDBGetAllStocksByAffiliatePaginated] should pass",
+			"GET",
+			"api/v1/pricestatus",
+			"",
+			"MiddlewareDBGetAllStocksByAffiliatePaginated",
+			"tests/payload-example.json",
+			http.StatusOK,
+			"Handler %s returned - got (%v) wanted (%v)",
+		},
 	}
 
 	for _, tt := range tests {
@@ -251,6 +271,12 @@ func TestAllMiddleware(t *testing.T) {
 			handler.ServeHTTP(rr, req)
 		case "MiddlewarePriceStatus":
 			handler := http.HandlerFunc(MiddlewarePriceStatus)
+			handler.ServeHTTP(rr, req)
+		case "MiddlewareDBGetAllStocksCount":
+			handler := http.HandlerFunc(MiddlewareDBGetAllStocksCount)
+			handler.ServeHTTP(rr, req)
+		case "MiddlewareDBGetAllStocksByAffiliatePaginated":
+			handler := http.HandlerFunc(MiddlewareDBGetAllStocksByAffiliatePaginated)
 			handler.ServeHTTP(rr, req)
 		}
 		// Our handlers satisfy http.Handler, so we can call their ServeHTTP method

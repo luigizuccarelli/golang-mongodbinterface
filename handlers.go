@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/imdario/mergo"
-	"gopkg.in/mgo.v2"
+	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
 	"net/http"
@@ -630,6 +630,65 @@ func (c *Connectors) DBGetStocks(id string, all bool) ([]Stock, error) {
 	}
 	iter.Close()
 
+	// all good
+	return stocks, nil
+}
+
+// DBGetStocksCount - get a list of stocks by publication or  affiliate
+// It has a string id parameter (publication or affiliate id) , a boolean if set true returns all stocks for an affiliate
+func (c *Connectors) DBGetStocksCount(id string) (int, error) {
+
+	logger.Trace(DBGETSTOCKS)
+
+	var query bson.M
+
+	// do lookup to get affiliate token on DB
+	s := c.session.Clone()
+	defer s.Close()
+	collection := s.DB(config.MongoDB.DatabaseName).C(STOCKS)
+	// first find the collection with the given ID
+	affiliateId, _ := strconv.Atoi(id)
+	query = bson.M{AFFILIATEID: affiliateId, "status": 1}
+
+	// first find the collection
+	result, _ := collection.Find(query).Count()
+
+	// all good
+	return result, nil
+}
+
+// DBGetStocksPaginated - get a list of stocks by publication or  affiliate
+// It has a string id parameter (publication or affiliate id) , a boolean if set true returns all stocks for an affiliate
+func (c *Connectors) DBGetStocksPaginated(id string, skip int, limit int) ([]Stock, error) {
+
+	logger.Trace(DBGETSTOCKS + "PAGINATED")
+
+	var stocks []Stock
+	var data Stock
+	var query bson.M
+
+	// do lookup to get affiliate token on DB
+	s := c.session.Clone()
+	defer s.Close()
+	collection := s.DB(config.MongoDB.DatabaseName).C(STOCKS)
+	// first find the collection with the given ID
+	affiliateId, _ := strconv.Atoi(id)
+	query = bson.M{AFFILIATEID: affiliateId, "status": 1}
+
+	iter := collection.Find(query).Sort(SYMBOL).Skip(skip).Limit(limit).Iter()
+
+	for iter.Next(&data) {
+		str := strings.Replace(data.Recommendation, "%", " percent", -1)
+		data.Recommendation = str
+		logger.Trace(fp(DBGETSTOCKS+DATA, data))
+		stocks = append(stocks, data)
+	}
+	if iter.Err() != nil {
+		logger.Error(fp(DBGETSTOCKS+DATA, iter.Err()))
+		iter.Close()
+		return stocks, iter.Err()
+	}
+	iter.Close()
 	// all good
 	return stocks, nil
 }

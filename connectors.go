@@ -21,6 +21,8 @@ type Clients interface {
 	DBUpdateStockCurrentPrice() error
 	DBUpdateWatchlist(body []byte) (Watchlist, error)
 	DBGetWatchlist(id string) (Watchlist, error)
+	DBGetStocksCount(id string) (int, error)
+	DBGetStocksPaginated(id string, skip int, limit int) ([]Stock, error)
 	GetPriceStatus() (string, error)
 	Get(string) (string, error)
 	Set(string, string, time.Duration) (string, error)

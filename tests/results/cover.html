@@ -54,11 +54,11 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">/home/lzuccarelli/Projects/portfolio-tracker/portfoliotracker-stocks-dbinterface/config.go (98.0%)</option>
+				<option value="file0">/home/lzuccarelli/Projects/myportfolio/myportfolio-stocks-dbinterface/config.go (98.0%)</option>
 				
-				<option value="file1">/home/lzuccarelli/Projects/portfolio-tracker/portfoliotracker-stocks-dbinterface/handlers.go (79.1%)</option>
+				<option value="file1">/home/lzuccarelli/Projects/myportfolio/myportfolio-stocks-dbinterface/handlers.go (79.9%)</option>
 				
-				<option value="file2">/home/lzuccarelli/Projects/portfolio-tracker/portfoliotracker-stocks-dbinterface/middleware.go (89.1%)</option>
+				<option value="file2">/home/lzuccarelli/Projects/myportfolio/myportfolio-stocks-dbinterface/middleware.go (88.2%)</option>
 				
 				</select>
 			</div>
@@ -206,7 +206,7 @@ import (
         "errors"
         "fmt"
         "github.com/imdario/mergo"
-        "gopkg.in/mgo.v2"
+        mgo "gopkg.in/mgo.v2"
         "gopkg.in/mgo.v2/bson"
         "io/ioutil"
         "net/http"
@@ -835,6 +835,65 @@ func (c *Connectors) DBGetStocks(id string, all bool) ([]Stock, error) <span cla
         return stocks, nil</span>
 }
 
+// DBGetStocksCount - get a list of stocks by publication or  affiliate
+// It has a string id parameter (publication or affiliate id) , a boolean if set true returns all stocks for an affiliate
+func (c *Connectors) DBGetStocksCount(id string) (int, error) <span class="cov8" title="1">{
+
+        logger.Trace(DBGETSTOCKS)
+
+        var query bson.M
+
+        // do lookup to get affiliate token on DB
+        s := c.session.Clone()
+        defer s.Close()
+        collection := s.DB(config.MongoDB.DatabaseName).C(STOCKS)
+        // first find the collection with the given ID
+        affiliateId, _ := strconv.Atoi(id)
+        query = bson.M{AFFILIATEID: affiliateId, "status": 1}
+
+        // first find the collection
+        result, _ := collection.Find(query).Count()
+
+        // all good
+        return result, nil
+}</span>
+
+// DBGetStocksPaginated - get a list of stocks by publication or  affiliate
+// It has a string id parameter (publication or affiliate id) , a boolean if set true returns all stocks for an affiliate
+func (c *Connectors) DBGetStocksPaginated(id string, skip int, limit int) ([]Stock, error) <span class="cov8" title="1">{
+
+        logger.Trace(DBGETSTOCKS + "PAGINATED")
+
+        var stocks []Stock
+        var data Stock
+        var query bson.M
+
+        // do lookup to get affiliate token on DB
+        s := c.session.Clone()
+        defer s.Close()
+        collection := s.DB(config.MongoDB.DatabaseName).C(STOCKS)
+        // first find the collection with the given ID
+        affiliateId, _ := strconv.Atoi(id)
+        query = bson.M{AFFILIATEID: affiliateId, "status": 1}
+
+        iter := collection.Find(query).Sort(SYMBOL).Skip(skip).Limit(limit).Iter()
+
+        for iter.Next(&amp;data) </span><span class="cov8" title="1">{
+                str := strings.Replace(data.Recommendation, "%", " percent", -1)
+                data.Recommendation = str
+                logger.Trace(fp(DBGETSTOCKS+DATA, data))
+                stocks = append(stocks, data)
+        }</span>
+        <span class="cov8" title="1">if iter.Err() != nil </span><span class="cov0" title="0">{
+                logger.Error(fp(DBGETSTOCKS+DATA, iter.Err()))
+                iter.Close()
+                return stocks, iter.Err()
+        }</span>
+        <span class="cov8" title="1">iter.Close()
+        // all good
+        return stocks, nil</span>
+}
+
 // DBGetWatchList - this function returns a watchlist for a specific client
 // It takes a string id parameter and returns a watchlist schema
 func (c *Connectors) DBGetWatchlist(id string) (Watchlist, error) <span class="cov8" title="1">{
@@ -950,6 +1009,7 @@ import (
         "github.com/gorilla/mux"
         "io/ioutil"
         "net/http"
+        "strconv"
         "strings"
         "time"
 )
@@ -1088,6 +1148,74 @@ func MiddlewareDBGetAllStocksByAffiliate(w http.ResponseWriter, r *http.Request)
                 response = handleError(w, "Indexing (MiddlewareDBGetAllStocksByAffiliate) "+err.Error(), payload)
         }</span> else<span class="cov8" title="1"> {
                 payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database call to stocks " + vars["affiliateid"], Stocks: stocks}
+                response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBGetAllStocksByAffiliate) successfull", Payload: payload}
+        }</span>
+
+        <span class="cov8" title="1">b, _ := json.MarshalIndent(response, "", "        ")
+        fmt.Fprintf(w, string(b))</span>
+}
+
+// MiddlewareDBGetAllStocksCount a http response and request wrapper for stock data
+// It takes a both response and request objects and returns void
+func MiddlewareDBGetAllStocksCount(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+
+        var response Response
+        var payload SchemaInterface
+        vars := mux.Vars(r)
+
+        addHeaders(w, r)
+        handleOptions(w, r)
+
+        count, err := connectors.DBGetStocksCount(vars["affiliateid"])
+        if err != nil </span><span class="cov0" title="0">{
+                response = handleError(w, "Count (MiddlewareDBGetAllStocksCount) "+err.Error(), payload)
+        }</span> else<span class="cov8" title="1"> {
+                payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Stocks count for affiliateid " + vars["affiliateid"] + ":" + strconv.Itoa(count)}
+                response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBGetAllStocksCount) successfull", Payload: payload}
+        }</span>
+
+        <span class="cov8" title="1">b, _ := json.MarshalIndent(response, "", "        ")
+        fmt.Fprintf(w, string(b))</span>
+}
+
+// MiddlewareDBGetAllStocksByAffiliatePaginated a http response and request wrapper for stock data
+// It takes a both response and request objects and returns void
+func MiddlewareDBGetAllStocksByAffiliatePaginated(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+
+        var response Response
+        var payload SchemaInterface
+        var totalPages int64 = 0
+        var limit, skip int
+        vars := mux.Vars(r)
+
+        addHeaders(w, r)
+        handleOptions(w, r)
+
+        offset := r.URL.Query().Get("offset")
+        page := r.URL.Query().Get("perpage")
+
+        count, err := connectors.DBGetStocksCount(vars["affiliateid"])
+        if page != "" &amp;&amp; offset != "" </span><span class="cov0" title="0">{
+                total, _ := strconv.Atoi(page)
+                totalPages = int64(count / total)
+                skip, _ = strconv.Atoi(offset)
+                limit, _ = strconv.Atoi(page)
+        }</span> else<span class="cov8" title="1"> {
+                totalPages = (int64(count) / 10)
+                skip = 0
+                limit = count
+        }</span>
+        <span class="cov8" title="1">stocks, err := connectors.DBGetStocksPaginated(vars["affiliateid"], skip, limit)
+        if err != nil </span><span class="cov0" title="0">{
+                response = handleError(w, "Paginated stocks (MiddlewareDBGetAllStocksByAffiliate) "+err.Error(), payload)
+        }</span> else<span class="cov8" title="1"> {
+                payload = SchemaInterface{
+                        LastUpdate: time.Now().Unix(),
+                        MetaInfo:   "MiddlewareDBGetAllStocksByAffiliate for affiliateId " + vars["affiliateid"],
+                        Count:      int64(count),
+                        TotalPages: totalPages,
+                        Stocks:     stocks,
+                }
                 response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBGetAllStocksByAffiliate) successfull", Payload: payload}
         }</span>
 

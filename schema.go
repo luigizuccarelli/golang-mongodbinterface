@@ -118,12 +118,55 @@ type Alphavantage struct {
 	} `json:"Global Quote"`
 }
 
+type IEXCloud struct {
+	Symbol                string      `json:"symbol"`
+	CompanyName           string      `json:"companyName"`
+	CalculationPrice      string      `json:"calculationPrice"`
+	Open                  interface{} `json:"open"`
+	OpenTime              interface{} `json:"openTime"`
+	Close                 float64     `json:"close"`
+	CloseTime             int64       `json:"closeTime"`
+	High                  interface{} `json:"high"`
+	Low                   interface{} `json:"low"`
+	LatestPrice           float64     `json:"latestPrice"`
+	LatestSource          string      `json:"latestSource"`
+	LatestTime            string      `json:"latestTime"`
+	LatestUpdate          int64       `json:"latestUpdate"`
+	LatestVolume          int         `json:"latestVolume"`
+	IexRealtimePrice      interface{} `json:"iexRealtimePrice"`
+	IexRealtimeSize       interface{} `json:"iexRealtimeSize"`
+	IexLastUpdated        interface{} `json:"iexLastUpdated"`
+	DelayedPrice          interface{} `json:"delayedPrice"`
+	DelayedPriceTime      interface{} `json:"delayedPriceTime"`
+	ExtendedPrice         float64     `json:"extendedPrice"`
+	ExtendedChange        float64     `json:"extendedChange"`
+	ExtendedChangePercent float64     `json:"extendedChangePercent"`
+	ExtendedPriceTime     int64       `json:"extendedPriceTime"`
+	PreviousClose         float64     `json:"previousClose"`
+	Change                int         `json:"change"`
+	ChangePercent         int         `json:"changePercent"`
+	IexMarketPercent      interface{} `json:"iexMarketPercent"`
+	IexVolume             interface{} `json:"iexVolume"`
+	AvgTotalVolume        int         `json:"avgTotalVolume"`
+	IexBidPrice           interface{} `json:"iexBidPrice"`
+	IexBidSize            interface{} `json:"iexBidSize"`
+	IexAskPrice           interface{} `json:"iexAskPrice"`
+	IexAskSize            interface{} `json:"iexAskSize"`
+	MarketCap             int64       `json:"marketCap"`
+	PeRatio               float64     `json:"peRatio"`
+	Week52High            float64     `json:"week52High"`
+	Week52Low             int         `json:"week52Low"`
+	YtdChange             float64     `json:"ytdChange"`
+}
+
 // ShcemaInterface - acts as an interface wrapper for our profile schema
 // All the go microservices will using this schema
 type SchemaInterface struct {
 	ID           bson.ObjectId `json:"_id" bson:"_id,omitempty"`
 	LastUpdate   int64         `json:"lastupdate,omitempty"`
 	MetaInfo     string        `json:"metainfo,omitempty"`
+	Count        int64         `json:"count,omitempty"`
+	TotalPages   int64         `json:"totalpages,omitempty"`
 	Affiliates   []Affiliate   `json:"affiliates"`
 	Publications []Publication `json:"publications"`
 	Stocks       []Stock       `json:"stocks"`

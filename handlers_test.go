@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/microlib/simple"
+	//"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
 	"net/http"
@@ -34,6 +35,8 @@ type Clients interface {
 	DBUpdateStockCurrentPrice() error
 	DBUpdateWatchlist(body []byte) (Watchlist, error)
 	DBGetWatchlist(string) (Watchlist, error)
+	DBGetStocksCount(string) (int, error)
+	DBGetStocksPaginated(string, int, int) ([]Stock, error)
 	GetPriceStatus() (string, error)
 	Get(string) (string, error)
 	Set(string, string, time.Duration) (string, error)
@@ -48,8 +51,7 @@ type Connectors struct {
 	session Session
 	http    *http.Client
 	redis   FakeRedis
-
-	name string
+	name    string
 }
 
 // fake redis Get
@@ -91,14 +93,15 @@ type Collection interface {
 type Query interface {
 	All(result interface{}) error
 	One(result interface{}) error
-	Sort(field interface{}) Iterator
+	Sort(field interface{}) Query
+	Count() (int, error)
+	Limit(val int) Query
+	Skip(val int) Query
+	Iter() FakeIter
+	//Iter() FakeIter
 }
 
-type Iterator interface {
-	Iter() IteratorObject
-}
-
-type IteratorObject interface {
+type Iter interface {
 	Next(data interface{}) bool
 	Err() error
 	Close()
@@ -137,21 +140,23 @@ type FakeDatabase struct{}
 
 // C fakes mgo.Database(name).Collection(name).
 func (db FakeDatabase) C(name string) Collection {
-	return FakeCollection{}
+	return FakeCollection{Name: name}
 }
 
 // FakeCollection satisfies Collection and act as a mock.
-type FakeCollection struct{}
+type FakeCollection struct {
+	Name string
+}
 
 // Find fake.
 func (fc FakeCollection) Find(query interface{}) Query {
-	fq := FakeQuery{}
+	fq := FakeQuery{Name: fc.Name}
 	return fq
 }
 
 // Find fake.
 func (fc FakeCollection) FindId(query interface{}) Query {
-	fq := FakeQuery{}
+	fq := FakeQuery{Name: fc.Name}
 	return fq
 }
 
@@ -190,7 +195,9 @@ func (fc FakeCollection) GetMyDocuments(file string) ([]interface{}, error) {
 }
 
 // FakeQuery satisfies Query and act as a mock.
-type FakeQuery struct{}
+type FakeQuery struct {
+	Name string
+}
 
 // All fake.
 func (fq FakeQuery) All(result interface{}) error {
@@ -213,22 +220,34 @@ func (fq FakeQuery) Distinct(field string, result interface{}) error {
 	return nil
 }
 
-type FakeIter struct{}
+// Distinct fake.
+func (fq FakeQuery) Count() (int, error) {
+	return 10, nil
+}
 
-type FakeIterObject struct{}
+type FakeIter struct {
+}
 
-func (f FakeIter) Iter() IteratorObject {
-	fio := FakeIterObject{}
+func (f FakeQuery) Iter() FakeIter {
+	fio := FakeIter{}
 	return fio
 }
 
 // Sort fake.
-func (fq FakeQuery) Sort(field interface{}) Iterator {
-	it := FakeIter{}
-	return it
+func (fq FakeQuery) Sort(field interface{}) Query {
+	return fq
 }
 
-func (fi FakeIterObject) Next(data interface{}) bool {
+// Limit fake.
+func (fq FakeQuery) Limit(val int) Query {
+	return fq
+}
+
+func (fq FakeQuery) Skip(val int) Query {
+	return fq
+}
+
+func (fi FakeIter) Next(data interface{}) bool {
 	counter++
 	if reflect.TypeOf(data).String() == "*main.Publication" {
 		*data.(*Publication) = Publication{Id: 1, Name: "Test1", AffiliateId: 1}
@@ -250,11 +269,11 @@ func (fi FakeIterObject) Next(data interface{}) bool {
 	return false
 }
 
-func (fi FakeIterObject) Err() error {
+func (fi FakeIter) Err() error {
 	return nil
 }
 
-func (fi FakeIterObject) Close() {
+func (fi FakeIter) Close() {
 }
 
 // RoundTripFunc .
@@ -456,6 +475,22 @@ func TestAll(t *testing.T) {
 			false,
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
+		{
+			"DBGetStocksCount should pass",
+			"1",
+			"DBGetStocksCount",
+			"tests/publication.json",
+			false,
+			"Handler %s returned - got (%v) wanted (%v)",
+		},
+		{
+			"DBGetStocksPaginated should pass",
+			"1",
+			"DBGetStocksPaginated",
+			"tests/publication.json",
+			false,
+			"Handler %s returned - got (%v) wanted (%v)",
+		},
 	}
 
 	var err error
@@ -499,6 +534,12 @@ func TestAll(t *testing.T) {
 		case "GetPriceStatus":
 			connectors = NewTestClients(tt.FileName, 200)
 			_, err = connectors.GetPriceStatus()
+		case "DBGetStocksCount":
+			connectors = NewTestClients(tt.FileName, 200)
+			_, err = connectors.DBGetStocksCount(tt.Payload)
+		case "DBGetStocksPaginated":
+			connectors = NewTestClients(tt.FileName, 200)
+			_, err = connectors.DBGetStocksPaginated(tt.Payload, 0, 10)
 		}
 
 		if !tt.want {
