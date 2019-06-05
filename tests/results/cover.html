@@ -56,7 +56,7 @@
 				
 				<option value="file0">/home/lzuccarelli/Projects/myportfolio/myportfolio-stocks-dbinterface/config.go (98.0%)</option>
 				
-				<option value="file1">/home/lzuccarelli/Projects/myportfolio/myportfolio-stocks-dbinterface/handlers.go (79.9%)</option>
+				<option value="file1">/home/lzuccarelli/Projects/myportfolio/myportfolio-stocks-dbinterface/handlers.go (77.8%)</option>
 				
 				<option value="file2">/home/lzuccarelli/Projects/myportfolio/myportfolio-stocks-dbinterface/middleware.go (88.2%)</option>
 				
@@ -233,12 +233,14 @@ const (
         AFFILIATEID               string = "affiliateid"
         PUBLICATIONS              string = "publications"
         PUBLICATIONID             string = "publicationid"
+        CUSTOMERID                string = "customerid"
         WATCHLIST                 string = "watchlist"
         STOCKS                    string = "stocks"
         SYMBOL                    string = "symbol"
         STATUS                    string = "status"
         MERGEDDATA                string = " : merged data"
         DATA                      string = " : data"
+        PERCENT                   string = " percent"
         CLONE                     string = "Session clone"
 )
 
@@ -313,7 +315,7 @@ func (c *Connectors) DBIndex() error <span class="cov8" title="1">{
 
         <span class="cov8" title="1">collection = s.DB(config.MongoDB.DatabaseName).C(WATCHLIST)
         index = mgo.Index{
-                Key: []string{"customerid"},
+                Key: []string{CUSTOMERID},
         }
         err = collection.EnsureIndex(index)
         if err != nil </span><span class="cov0" title="0">{
@@ -544,7 +546,7 @@ func (c *Connectors) DBUpdateAffiliateSpecific(b []byte) error <span class="cov8
                                         stock.Buy = tss[y].Buy
                                         stock.Stop = tss[y].SubTrades[0].SubstradeSetting.Stop
                                         // golang does not like % in a string - some cleanup is needed
-                                        stock.Recommendation = strings.Replace(tss[y].Recommendation.Info, "%", " percent", -1)
+                                        stock.Recommendation = strings.Replace(tss[y].Recommendation.Info, "%", PERCENT, -1)
                                         stock.Status = tss[y].Status
                                         stock.CurrencySign = tss[y].CurrencySign
 
@@ -575,10 +577,10 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error <span class="cov8" title=
 
         logger.Trace(DBUPDATESTOCKCURRENTPRICE)
 
-        var stockprice Alphavantage
         var stocks []Stock
         var stock Stock
         var bErr bool = false
+        var formatedUrl string
 
         // update redis to indicate stockupdate for prices is pending
         c.Set(DBUPDATESTOCKCURRENTPRICE, "pending", 3600*time.Second)
@@ -592,7 +594,7 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error <span class="cov8" title=
                 defer s.Close()
                 collection := s.DB(config.MongoDB.DatabaseName).C(STOCKS)
 
-                query := bson.M{"status": 1}
+                query := bson.M{STATUS: 1}
                 // find the stocks
                 iter := collection.Find(query).Sort(SYMBOL).Iter()
 
@@ -610,10 +612,18 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error <span class="cov8" title=
                 // iterate through each stock
                 for x, _ := range stocks </span><span class="cov8" title="1">{
 
+                        url := strings.NewReplacer("{stock}", stocks[x].Symbol, "{token}", config.Providers[0].Token)
+                        switch config.Provider </span>{
+                        case "alphavantage":<span class="cov8" title="1">
+                                formatedUrl = url.Replace(config.Providers[0].Url)</span>
+                        case "iexcloud":<span class="cov0" title="0">
+                                formatedUrl = url.Replace(config.Providers[0].Url)</span>
+                        }
+
                         // Get the latest stock data
-                        req, err := http.NewRequest("GET", config.QuoteUrl+"GLOBAL_QUOTE&amp;symbol="+stocks[x].Symbol+"&amp;apikey="+config.Token, nil)
+                        <span class="cov8" title="1">req, err := http.NewRequest("GET", formatedUrl, nil)
                         resp, err := c.http.Do(req)
-                        logger.Debug(fp(DBUPDATESTOCKCURRENTPRICE, config.QuoteUrl))
+                        logger.Debug(fp(DBUPDATESTOCKCURRENTPRICE, formatedUrl))
                         logger.Info(fp(DBUPDATESTOCKCURRENTPRICE+"Retrieving stock price for ", stocks[x].Symbol))
                         if err != nil || resp.StatusCode != 200 </span><span class="cov0" title="0">{
                                 // just log the error - this is not a critical error
@@ -627,28 +637,49 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error <span class="cov8" title=
                                 logger.Error(fp(DBUPDATESTOCKCURRENTPRICE, err.Error()))
                                 bErr = true
                         }</span>
-                        <span class="cov8" title="1">e := json.Unmarshal(body, &amp;stockprice)
-                        if e != nil </span><span class="cov8" title="1">{
-                                logger.Error(fp(DBUPDATESTOCKCURRENTPRICE, e.Error()))
-                                bErr = true
-                        }</span>
-                        <span class="cov8" title="1">logger.Info(fp(DBUPDATESTOCKCURRENTPRICE+"Stock from alphavantage ", stockprice))
 
-                        if stockprice == (Alphavantage{}) </span><span class="cov8" title="1">{
-                                stocks[x].Status = -1
-                        }</span> else<span class="cov8" title="1"> {
-                                stocks[x].Last, _ = strconv.ParseFloat(stockprice.GlobalQuote.Price, 64)
-                                stocks[x].Change, _ = strconv.ParseFloat(stockprice.GlobalQuote.ChangePercent[:len(stockprice.GlobalQuote.ChangePercent)-1], 64)
-                        }</span>
+                        <span class="cov8" title="1">switch config.Provider </span>{
+                        case "alphavantage":<span class="cov8" title="1">
+                                var stockprice Alphavantage
+                                e := json.Unmarshal(body, &amp;stockprice)
+                                if e != nil </span><span class="cov8" title="1">{
+                                        logger.Error(fp(DBUPDATESTOCKCURRENTPRICE, e.Error()))
+                                        bErr = true
+                                }</span>
+                                <span class="cov8" title="1">logger.Info(fp(DBUPDATESTOCKCURRENTPRICE+"Stock from alphavantage ", stockprice))
+
+                                if stockprice == (Alphavantage{}) </span><span class="cov8" title="1">{
+                                        stocks[x].Status = -1
+                                }</span> else<span class="cov8" title="1"> {
+                                        stocks[x].Last, _ = strconv.ParseFloat(stockprice.GlobalQuote.Price, 64)
+                                        stocks[x].Change, _ = strconv.ParseFloat(stockprice.GlobalQuote.ChangePercent[:len(stockprice.GlobalQuote.ChangePercent)-1], 64)
+                                }</span>
+                                <span class="cov8" title="1">stockprice = Alphavantage{}</span>
+                        case "iexcloud":<span class="cov0" title="0">
+                                var stockprice IEXCloud
+                                e := json.Unmarshal(body, &amp;stockprice)
+                                if e != nil </span><span class="cov0" title="0">{
+                                        logger.Error(fp(DBUPDATESTOCKCURRENTPRICE, e.Error()))
+                                        bErr = true
+                                }</span>
+                                <span class="cov0" title="0">logger.Info(fp(DBUPDATESTOCKCURRENTPRICE+"Stock from iexcloud ", stockprice))
+
+                                if stockprice == (IEXCloud{}) </span><span class="cov0" title="0">{
+                                        stocks[x].Status = -1
+                                }</span> else<span class="cov0" title="0"> {
+                                        stocks[x].Last = stockprice.LatestPrice
+                                        stocks[x].Change = float64(stockprice.ChangePercent)
+                                }</span>
+                                <span class="cov0" title="0">stockprice = IEXCloud{}</span>
+                        }
 
                         <span class="cov8" title="1">query := bson.M{"_id": bson.ObjectIdHex(stocks[x].UID.Hex())}
                         logger.Debug(fp(DBUPDATESTOCKCURRENTPRICE+MERGEDDATA, stocks[x]))
-                        e = collection.Update(query, stocks[x])
+                        e := collection.Update(query, stocks[x])
                         if e != nil </span><span class="cov0" title="0">{
                                 logger.Error(fp(DBUPDATESTOCKCURRENTPRICE+MERGEDDATA, e.Error()))
                                 bErr = true
                         }</span>
-                        <span class="cov8" title="1">stockprice = Alphavantage{}</span>
                 }
 
                 //lock.Unlock()
@@ -809,17 +840,17 @@ func (c *Connectors) DBGetStocks(id string, all bool) ([]Stock, error) <span cla
         // first find the collection with the given ID
         if !all </span><span class="cov8" title="1">{
                 publicationId, _ := strconv.Atoi(id)
-                query = bson.M{PUBLICATIONID: publicationId, "status": 1}
+                query = bson.M{PUBLICATIONID: publicationId, STATUS: 1}
         }</span> else<span class="cov8" title="1"> {
                 affiliateId, _ := strconv.Atoi(id)
-                query = bson.M{AFFILIATEID: affiliateId, "status": 1}
+                query = bson.M{AFFILIATEID: affiliateId, STATUS: 1}
         }</span>
 
         // first find the collection with the given ID
         <span class="cov8" title="1">iter := collection.Find(query).Sort(SYMBOL).Iter()
 
         for iter.Next(&amp;data) </span><span class="cov8" title="1">{
-                str := strings.Replace(data.Recommendation, "%", " percent", -1)
+                str := strings.Replace(data.Recommendation, "%", PERCENT, -1)
                 data.Recommendation = str
                 logger.Trace(fp(DBGETSTOCKS+DATA, data))
                 stocks = append(stocks, data)
@@ -836,50 +867,36 @@ func (c *Connectors) DBGetStocks(id string, all bool) ([]Stock, error) <span cla
 }
 
 // DBGetStocksCount - get a list of stocks by publication or  affiliate
-// It has a string id parameter (publication or affiliate id) , a boolean if set true returns all stocks for an affiliate
+// It has a string id parameter (publication or affiliate id) , it returns an integer
 func (c *Connectors) DBGetStocksCount(id string) (int, error) <span class="cov8" title="1">{
-
-        logger.Trace(DBGETSTOCKS)
-
         var query bson.M
 
-        // do lookup to get affiliate token on DB
         s := c.session.Clone()
         defer s.Close()
         collection := s.DB(config.MongoDB.DatabaseName).C(STOCKS)
-        // first find the collection with the given ID
         affiliateId, _ := strconv.Atoi(id)
-        query = bson.M{AFFILIATEID: affiliateId, "status": 1}
-
-        // first find the collection
+        query = bson.M{AFFILIATEID: affiliateId, STATUS: 1}
         result, _ := collection.Find(query).Count()
-
-        // all good
         return result, nil
 }</span>
 
-// DBGetStocksPaginated - get a list of stocks by publication or  affiliate
-// It has a string id parameter (publication or affiliate id) , a boolean if set true returns all stocks for an affiliate
+// DBGetStocksPaginated - get a list of stocks by publication or  affiliate with pagination for performance improvement
+// It has a string id parameter (publication or affiliate id) , skip and limit are integer values
 func (c *Connectors) DBGetStocksPaginated(id string, skip int, limit int) ([]Stock, error) <span class="cov8" title="1">{
-
-        logger.Trace(DBGETSTOCKS + "PAGINATED")
 
         var stocks []Stock
         var data Stock
         var query bson.M
 
-        // do lookup to get affiliate token on DB
         s := c.session.Clone()
         defer s.Close()
         collection := s.DB(config.MongoDB.DatabaseName).C(STOCKS)
-        // first find the collection with the given ID
         affiliateId, _ := strconv.Atoi(id)
-        query = bson.M{AFFILIATEID: affiliateId, "status": 1}
-
+        query = bson.M{AFFILIATEID: affiliateId, STATUS: 1}
         iter := collection.Find(query).Sort(SYMBOL).Skip(skip).Limit(limit).Iter()
 
         for iter.Next(&amp;data) </span><span class="cov8" title="1">{
-                str := strings.Replace(data.Recommendation, "%", " percent", -1)
+                str := strings.Replace(data.Recommendation, "%", PERCENT, -1)
                 data.Recommendation = str
                 logger.Trace(fp(DBGETSTOCKS+DATA, data))
                 stocks = append(stocks, data)
@@ -905,7 +922,7 @@ func (c *Connectors) DBGetWatchlist(id string) (Watchlist, error) <span class="c
         defer s.Close()
         collection := s.DB(config.MongoDB.DatabaseName).C(WATCHLIST)
         customerId, _ := strconv.Atoi(id)
-        query := bson.M{"customerid": customerId}
+        query := bson.M{CUSTOMERID: customerId}
 
         // first find the collection with the given ID
         err := collection.Find(query).One(&amp;data)
@@ -947,7 +964,7 @@ func (c *Connectors) DBUpdateWatchlist(body []byte) (Watchlist, error) <span cla
         // collection publications
         collection := s.DB(config.MongoDB.DatabaseName).C("watchlist")
 
-        query := bson.M{"customerid": data.CustomerId}
+        query := bson.M{CUSTOMERID: data.CustomerId}
 
         // first find the collection with the given ID
         err := collection.Find(query).One(&amp;existing)
@@ -1097,11 +1114,11 @@ func MiddlewareDBGetAllPublicationsByAffiliate(w http.ResponseWriter, r *http.Re
         addHeaders(w, r)
         handleOptions(w, r)
 
-        publications, err := connectors.DBGetPublications(vars["affiliateid"])
+        publications, err := connectors.DBGetPublications(vars[AFFILIATEID])
         if err != nil </span><span class="cov0" title="0">{
                 response = handleError(w, "Indexing (MiddlewareDBGetAllPublicationsByAffiliate) "+err.Error(), payload)
         }</span> else<span class="cov8" title="1"> {
-                payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database call to publications for affiliate " + vars["affiliateid"], Publications: publications}
+                payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database call to publications for affiliate " + vars[AFFILIATEID], Publications: publications}
                 response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBGetAllPublicationsByAffiliate) successfull", Payload: payload}
         }</span>
 
@@ -1143,11 +1160,11 @@ func MiddlewareDBGetAllStocksByAffiliate(w http.ResponseWriter, r *http.Request)
         addHeaders(w, r)
         handleOptions(w, r)
 
-        stocks, err := connectors.DBGetStocks(vars["affiliateid"], true)
+        stocks, err := connectors.DBGetStocks(vars[AFFILIATEID], true)
         if err != nil </span><span class="cov0" title="0">{
-                response = handleError(w, "Indexing (MiddlewareDBGetAllStocksByAffiliate) "+err.Error(), payload)
+                response = handleError(w, "MW call (MiddlewareDBGetAllStocksByAffiliate) "+err.Error(), payload)
         }</span> else<span class="cov8" title="1"> {
-                payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database call to stocks " + vars["affiliateid"], Stocks: stocks}
+                payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database call to stocks " + vars[AFFILIATEID], Stocks: stocks}
                 response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBGetAllStocksByAffiliate) successfull", Payload: payload}
         }</span>
 
@@ -1166,11 +1183,11 @@ func MiddlewareDBGetAllStocksCount(w http.ResponseWriter, r *http.Request) <span
         addHeaders(w, r)
         handleOptions(w, r)
 
-        count, err := connectors.DBGetStocksCount(vars["affiliateid"])
+        count, err := connectors.DBGetStocksCount(vars[AFFILIATEID])
         if err != nil </span><span class="cov0" title="0">{
-                response = handleError(w, "Count (MiddlewareDBGetAllStocksCount) "+err.Error(), payload)
+                response = handleError(w, "MW call (MiddlewareDBGetAllStocksCount) "+err.Error(), payload)
         }</span> else<span class="cov8" title="1"> {
-                payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Stocks count for affiliateid " + vars["affiliateid"] + ":" + strconv.Itoa(count)}
+                payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Stocks count for affiliateid " + vars[AFFILIATEID] + ":" + strconv.Itoa(count)}
                 response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBGetAllStocksCount) successfull", Payload: payload}
         }</span>
 
@@ -1194,7 +1211,7 @@ func MiddlewareDBGetAllStocksByAffiliatePaginated(w http.ResponseWriter, r *http
         offset := r.URL.Query().Get("offset")
         page := r.URL.Query().Get("perpage")
 
-        count, err := connectors.DBGetStocksCount(vars["affiliateid"])
+        count, err := connectors.DBGetStocksCount(vars[AFFILIATEID])
         if page != "" &amp;&amp; offset != "" </span><span class="cov0" title="0">{
                 total, _ := strconv.Atoi(page)
                 totalPages = int64(count / total)
@@ -1205,13 +1222,13 @@ func MiddlewareDBGetAllStocksByAffiliatePaginated(w http.ResponseWriter, r *http
                 skip = 0
                 limit = count
         }</span>
-        <span class="cov8" title="1">stocks, err := connectors.DBGetStocksPaginated(vars["affiliateid"], skip, limit)
+        <span class="cov8" title="1">stocks, err := connectors.DBGetStocksPaginated(vars[AFFILIATEID], skip, limit)
         if err != nil </span><span class="cov0" title="0">{
                 response = handleError(w, "Paginated stocks (MiddlewareDBGetAllStocksByAffiliate) "+err.Error(), payload)
         }</span> else<span class="cov8" title="1"> {
                 payload = SchemaInterface{
                         LastUpdate: time.Now().Unix(),
-                        MetaInfo:   "MiddlewareDBGetAllStocksByAffiliate for affiliateId " + vars["affiliateid"],
+                        MetaInfo:   "MiddlewareDBGetAllStocksByAffiliate for affiliateId " + vars[AFFILIATEID],
                         Count:      int64(count),
                         TotalPages: totalPages,
                         Stocks:     stocks,

@@ -94,11 +94,11 @@ func MiddlewareDBGetAllPublicationsByAffiliate(w http.ResponseWriter, r *http.Re
 	addHeaders(w, r)
 	handleOptions(w, r)
 
-	publications, err := connectors.DBGetPublications(vars["affiliateid"])
+	publications, err := connectors.DBGetPublications(vars[AFFILIATEID])
 	if err != nil {
 		response = handleError(w, "Indexing (MiddlewareDBGetAllPublicationsByAffiliate) "+err.Error(), payload)
 	} else {
-		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database call to publications for affiliate " + vars["affiliateid"], Publications: publications}
+		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database call to publications for affiliate " + vars[AFFILIATEID], Publications: publications}
 		response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBGetAllPublicationsByAffiliate) successfull", Payload: payload}
 	}
 
@@ -140,11 +140,11 @@ func MiddlewareDBGetAllStocksByAffiliate(w http.ResponseWriter, r *http.Request)
 	addHeaders(w, r)
 	handleOptions(w, r)
 
-	stocks, err := connectors.DBGetStocks(vars["affiliateid"], true)
+	stocks, err := connectors.DBGetStocks(vars[AFFILIATEID], true)
 	if err != nil {
-		response = handleError(w, "Indexing (MiddlewareDBGetAllStocksByAffiliate) "+err.Error(), payload)
+		response = handleError(w, "MW call (MiddlewareDBGetAllStocksByAffiliate) "+err.Error(), payload)
 	} else {
-		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database call to stocks " + vars["affiliateid"], Stocks: stocks}
+		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database call to stocks " + vars[AFFILIATEID], Stocks: stocks}
 		response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBGetAllStocksByAffiliate) successfull", Payload: payload}
 	}
 
@@ -163,11 +163,11 @@ func MiddlewareDBGetAllStocksCount(w http.ResponseWriter, r *http.Request) {
 	addHeaders(w, r)
 	handleOptions(w, r)
 
-	count, err := connectors.DBGetStocksCount(vars["affiliateid"])
+	count, err := connectors.DBGetStocksCount(vars[AFFILIATEID])
 	if err != nil {
-		response = handleError(w, "Count (MiddlewareDBGetAllStocksCount) "+err.Error(), payload)
+		response = handleError(w, "MW call (MiddlewareDBGetAllStocksCount) "+err.Error(), payload)
 	} else {
-		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Stocks count for affiliateid " + vars["affiliateid"] + ":" + strconv.Itoa(count)}
+		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Stocks count for affiliateid " + vars[AFFILIATEID] + ":" + strconv.Itoa(count)}
 		response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBGetAllStocksCount) successfull", Payload: payload}
 	}
 
@@ -191,7 +191,7 @@ func MiddlewareDBGetAllStocksByAffiliatePaginated(w http.ResponseWriter, r *http
 	offset := r.URL.Query().Get("offset")
 	page := r.URL.Query().Get("perpage")
 
-	count, err := connectors.DBGetStocksCount(vars["affiliateid"])
+	count, err := connectors.DBGetStocksCount(vars[AFFILIATEID])
 	if page != "" && offset != "" {
 		total, _ := strconv.Atoi(page)
 		totalPages = int64(count / total)
@@ -202,13 +202,13 @@ func MiddlewareDBGetAllStocksByAffiliatePaginated(w http.ResponseWriter, r *http
 		skip = 0
 		limit = count
 	}
-	stocks, err := connectors.DBGetStocksPaginated(vars["affiliateid"], skip, limit)
+	stocks, err := connectors.DBGetStocksPaginated(vars[AFFILIATEID], skip, limit)
 	if err != nil {
 		response = handleError(w, "Paginated stocks (MiddlewareDBGetAllStocksByAffiliate) "+err.Error(), payload)
 	} else {
 		payload = SchemaInterface{
 			LastUpdate: time.Now().Unix(),
-			MetaInfo:   "MiddlewareDBGetAllStocksByAffiliate for affiliateId " + vars["affiliateid"],
+			MetaInfo:   "MiddlewareDBGetAllStocksByAffiliate for affiliateId " + vars[AFFILIATEID],
 			Count:      int64(count),
 			TotalPages: totalPages,
 			Stocks:     stocks,

@@ -1,5 +1,4 @@
-
-   {
+{
     "Global Quote": {
       "01. symbol": "TST",
       "02. open": "123",
@@ -12,5 +11,5 @@
       "09. change": "123",
       "10. change percent": "45%"
     }
-  }
+}
 

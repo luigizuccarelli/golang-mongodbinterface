@@ -32,12 +32,14 @@ const (
 	AFFILIATEID               string = "affiliateid"
 	PUBLICATIONS              string = "publications"
 	PUBLICATIONID             string = "publicationid"
+	CUSTOMERID                string = "customerid"
 	WATCHLIST                 string = "watchlist"
 	STOCKS                    string = "stocks"
 	SYMBOL                    string = "symbol"
 	STATUS                    string = "status"
 	MERGEDDATA                string = " : merged data"
 	DATA                      string = " : data"
+	PERCENT                   string = " percent"
 	CLONE                     string = "Session clone"
 )
 
@@ -112,7 +114,7 @@ func (c *Connectors) DBIndex() error {
 
 	collection = s.DB(config.MongoDB.DatabaseName).C(WATCHLIST)
 	index = mgo.Index{
-		Key: []string{"customerid"},
+		Key: []string{CUSTOMERID},
 	}
 	err = collection.EnsureIndex(index)
 	if err != nil {
@@ -343,7 +345,7 @@ func (c *Connectors) DBUpdateAffiliateSpecific(b []byte) error {
 					stock.Buy = tss[y].Buy
 					stock.Stop = tss[y].SubTrades[0].SubstradeSetting.Stop
 					// golang does not like % in a string - some cleanup is needed
-					stock.Recommendation = strings.Replace(tss[y].Recommendation.Info, "%", " percent", -1)
+					stock.Recommendation = strings.Replace(tss[y].Recommendation.Info, "%", PERCENT, -1)
 					stock.Status = tss[y].Status
 					stock.CurrencySign = tss[y].CurrencySign
 
@@ -374,10 +376,10 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error {
 
 	logger.Trace(DBUPDATESTOCKCURRENTPRICE)
 
-	var stockprice Alphavantage
 	var stocks []Stock
 	var stock Stock
 	var bErr bool = false
+	var formatedUrl string
 
 	// update redis to indicate stockupdate for prices is pending
 	c.Set(DBUPDATESTOCKCURRENTPRICE, "pending", 3600*time.Second)
@@ -391,7 +393,7 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error {
 		defer s.Close()
 		collection := s.DB(config.MongoDB.DatabaseName).C(STOCKS)
 
-		query := bson.M{"status": 1}
+		query := bson.M{STATUS: 1}
 		// find the stocks
 		iter := collection.Find(query).Sort(SYMBOL).Iter()
 
@@ -409,10 +411,18 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error {
 		// iterate through each stock
 		for x, _ := range stocks {
 
+			url := strings.NewReplacer("{stock}", stocks[x].Symbol, "{token}", config.Providers[0].Token)
+			switch config.Provider {
+			case "alphavantage":
+				formatedUrl = url.Replace(config.Providers[0].Url)
+			case "iexcloud":
+				formatedUrl = url.Replace(config.Providers[0].Url)
+			}
+
 			// Get the latest stock data
-			req, err := http.NewRequest("GET", config.QuoteUrl+"GLOBAL_QUOTE&symbol="+stocks[x].Symbol+"&apikey="+config.Token, nil)
+			req, err := http.NewRequest("GET", formatedUrl, nil)
 			resp, err := c.http.Do(req)
-			logger.Debug(fp(DBUPDATESTOCKCURRENTPRICE, config.QuoteUrl))
+			logger.Debug(fp(DBUPDATESTOCKCURRENTPRICE, formatedUrl))
 			logger.Info(fp(DBUPDATESTOCKCURRENTPRICE+"Retrieving stock price for ", stocks[x].Symbol))
 			if err != nil || resp.StatusCode != 200 {
 				// just log the error - this is not a critical error
@@ -426,28 +436,49 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error {
 				logger.Error(fp(DBUPDATESTOCKCURRENTPRICE, err.Error()))
 				bErr = true
 			}
-			e := json.Unmarshal(body, &stockprice)
-			if e != nil {
-				logger.Error(fp(DBUPDATESTOCKCURRENTPRICE, e.Error()))
-				bErr = true
-			}
-			logger.Info(fp(DBUPDATESTOCKCURRENTPRICE+"Stock from alphavantage ", stockprice))
 
-			if stockprice == (Alphavantage{}) {
-				stocks[x].Status = -1
-			} else {
-				stocks[x].Last, _ = strconv.ParseFloat(stockprice.GlobalQuote.Price, 64)
-				stocks[x].Change, _ = strconv.ParseFloat(stockprice.GlobalQuote.ChangePercent[:len(stockprice.GlobalQuote.ChangePercent)-1], 64)
+			switch config.Provider {
+			case "alphavantage":
+				var stockprice Alphavantage
+				e := json.Unmarshal(body, &stockprice)
+				if e != nil {
+					logger.Error(fp(DBUPDATESTOCKCURRENTPRICE, e.Error()))
+					bErr = true
+				}
+				logger.Info(fp(DBUPDATESTOCKCURRENTPRICE+"Stock from alphavantage ", stockprice))
+
+				if stockprice == (Alphavantage{}) {
+					stocks[x].Status = -1
+				} else {
+					stocks[x].Last, _ = strconv.ParseFloat(stockprice.GlobalQuote.Price, 64)
+					stocks[x].Change, _ = strconv.ParseFloat(stockprice.GlobalQuote.ChangePercent[:len(stockprice.GlobalQuote.ChangePercent)-1], 64)
+				}
+				stockprice = Alphavantage{}
+			case "iexcloud":
+				var stockprice IEXCloud
+				e := json.Unmarshal(body, &stockprice)
+				if e != nil {
+					logger.Error(fp(DBUPDATESTOCKCURRENTPRICE, e.Error()))
+					bErr = true
+				}
+				logger.Info(fp(DBUPDATESTOCKCURRENTPRICE+"Stock from iexcloud ", stockprice))
+
+				if stockprice == (IEXCloud{}) {
+					stocks[x].Status = -1
+				} else {
+					stocks[x].Last = stockprice.LatestPrice
+					stocks[x].Change = float64(stockprice.ChangePercent)
+				}
+				stockprice = IEXCloud{}
 			}
 
 			query := bson.M{"_id": bson.ObjectIdHex(stocks[x].UID.Hex())}
 			logger.Debug(fp(DBUPDATESTOCKCURRENTPRICE+MERGEDDATA, stocks[x]))
-			e = collection.Update(query, stocks[x])
+			e := collection.Update(query, stocks[x])
 			if e != nil {
 				logger.Error(fp(DBUPDATESTOCKCURRENTPRICE+MERGEDDATA, e.Error()))
 				bErr = true
 			}
-			stockprice = Alphavantage{}
 		}
 
 		//lock.Unlock()
@@ -608,17 +639,17 @@ func (c *Connectors) DBGetStocks(id string, all bool) ([]Stock, error) {
 	// first find the collection with the given ID
 	if !all {
 		publicationId, _ := strconv.Atoi(id)
-		query = bson.M{PUBLICATIONID: publicationId, "status": 1}
+		query = bson.M{PUBLICATIONID: publicationId, STATUS: 1}
 	} else {
 		affiliateId, _ := strconv.Atoi(id)
-		query = bson.M{AFFILIATEID: affiliateId, "status": 1}
+		query = bson.M{AFFILIATEID: affiliateId, STATUS: 1}
 	}
 
 	// first find the collection with the given ID
 	iter := collection.Find(query).Sort(SYMBOL).Iter()
 
 	for iter.Next(&data) {
-		str := strings.Replace(data.Recommendation, "%", " percent", -1)
+		str := strings.Replace(data.Recommendation, "%", PERCENT, -1)
 		data.Recommendation = str
 		logger.Trace(fp(DBGETSTOCKS+DATA, data))
 		stocks = append(stocks, data)
@@ -635,50 +666,36 @@ func (c *Connectors) DBGetStocks(id string, all bool) ([]Stock, error) {
 }
 
 // DBGetStocksCount - get a list of stocks by publication or  affiliate
-// It has a string id parameter (publication or affiliate id) , a boolean if set true returns all stocks for an affiliate
+// It has a string id parameter (publication or affiliate id) , it returns an integer
 func (c *Connectors) DBGetStocksCount(id string) (int, error) {
-
-	logger.Trace(DBGETSTOCKS)
-
 	var query bson.M
 
-	// do lookup to get affiliate token on DB
 	s := c.session.Clone()
 	defer s.Close()
 	collection := s.DB(config.MongoDB.DatabaseName).C(STOCKS)
-	// first find the collection with the given ID
 	affiliateId, _ := strconv.Atoi(id)
-	query = bson.M{AFFILIATEID: affiliateId, "status": 1}
-
-	// first find the collection
+	query = bson.M{AFFILIATEID: affiliateId, STATUS: 1}
 	result, _ := collection.Find(query).Count()
-
-	// all good
 	return result, nil
 }
 
-// DBGetStocksPaginated - get a list of stocks by publication or  affiliate
-// It has a string id parameter (publication or affiliate id) , a boolean if set true returns all stocks for an affiliate
+// DBGetStocksPaginated - get a list of stocks by publication or  affiliate with pagination for performance improvement
+// It has a string id parameter (publication or affiliate id) , skip and limit are integer values
 func (c *Connectors) DBGetStocksPaginated(id string, skip int, limit int) ([]Stock, error) {
-
-	logger.Trace(DBGETSTOCKS + "PAGINATED")
 
 	var stocks []Stock
 	var data Stock
 	var query bson.M
 
-	// do lookup to get affiliate token on DB
 	s := c.session.Clone()
 	defer s.Close()
 	collection := s.DB(config.MongoDB.DatabaseName).C(STOCKS)
-	// first find the collection with the given ID
 	affiliateId, _ := strconv.Atoi(id)
-	query = bson.M{AFFILIATEID: affiliateId, "status": 1}
-
+	query = bson.M{AFFILIATEID: affiliateId, STATUS: 1}
 	iter := collection.Find(query).Sort(SYMBOL).Skip(skip).Limit(limit).Iter()
 
 	for iter.Next(&data) {
-		str := strings.Replace(data.Recommendation, "%", " percent", -1)
+		str := strings.Replace(data.Recommendation, "%", PERCENT, -1)
 		data.Recommendation = str
 		logger.Trace(fp(DBGETSTOCKS+DATA, data))
 		stocks = append(stocks, data)
@@ -704,7 +721,7 @@ func (c *Connectors) DBGetWatchlist(id string) (Watchlist, error) {
 	defer s.Close()
 	collection := s.DB(config.MongoDB.DatabaseName).C(WATCHLIST)
 	customerId, _ := strconv.Atoi(id)
-	query := bson.M{"customerid": customerId}
+	query := bson.M{CUSTOMERID: customerId}
 
 	// first find the collection with the given ID
 	err := collection.Find(query).One(&data)
@@ -746,7 +763,7 @@ func (c *Connectors) DBUpdateWatchlist(body []byte) (Watchlist, error) {
 	// collection publications
 	collection := s.DB(config.MongoDB.DatabaseName).C("watchlist")
 
-	query := bson.M{"customerid": data.CustomerId}
+	query := bson.M{CUSTOMERID: data.CustomerId}
 
 	// first find the collection with the given ID
 	err := collection.Find(query).One(&existing)

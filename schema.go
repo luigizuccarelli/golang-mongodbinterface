@@ -15,16 +15,18 @@ import (
 
 // Config structure - define the json format for our microservice config
 type Config struct {
-	Version  string `json:"version"`
-	Level    string `json:"level"`
-	Basedir  string `json:"base_dir"`
-	Port     string `json:"port"`
-	Cache    string `json:"cache"`
-	Url      string `json:"url"`
-	QuoteUrl string `json:"quoteurl"`
-	Token    string `json:"token"`
-	MongoDB  Mongodb
-	RedisDB  Redis
+	Version   string `json:"version"`
+	Level     string `json:"level"`
+	Basedir   string `json:"base_dir"`
+	Provider  string `json:"provider"`
+	Providers []Provider
+	Port      string `json:"port"`
+	Cache     string `json:"cache"`
+	Url       string `json:"url"`
+	QuoteUrl  string `json:"quoteurl"`
+	Token     string `json:"token"`
+	MongoDB   Mongodb
+	RedisDB   Redis
 }
 
 // Mongodb structure - the base config to connect to mongodb
@@ -36,6 +38,12 @@ type Mongodb struct {
 	Password       string `json:"pwd"`
 	AdminUser      string `json:"adminuser"`
 	AdminPasssword string `json:"adminpwd"`
+}
+
+type Provider struct {
+	Name  string `json:"name"`
+	Url   string `json:"url"`
+	Token string `json:"token"`
 }
 
 type Redis struct {

@@ -294,6 +294,7 @@ func NewHttpTestClient(fn RoundTripFunc) *http.Client {
 func NewTestClients(data string, code int) Clients {
 
 	// read the config
+	//config, _ = Init("config.json")
 	logger.Level = "info"
 
 	// initialise our store (cache)
@@ -511,6 +512,7 @@ func TestAll(t *testing.T) {
 			connectors = NewTestClients(tt.FileName, 200)
 			err = connectors.DBUpdateAffiliateSpecific([]byte(tt.Payload))
 		case "DBUpdateStockCurrentPrice":
+			config, _ = Init("config.json")
 			connectors = NewTestClients(tt.FileName, 200)
 			err = connectors.DBUpdateStockCurrentPrice()
 		case "DBUpdateStock":
