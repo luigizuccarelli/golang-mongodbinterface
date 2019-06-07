@@ -411,12 +411,13 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error {
 		// iterate through each stock
 		for x, _ := range stocks {
 
-			url := strings.NewReplacer("{stock}", stocks[x].Symbol, "{token}", config.Providers[0].Token)
 			switch config.Provider {
 			case "alphavantage":
+				url := strings.NewReplacer("{stock}", stocks[x].Symbol, "{token}", config.Providers[0].Token)
 				formatedUrl = url.Replace(config.Providers[0].Url)
 			case "iexcloud":
-				formatedUrl = url.Replace(config.Providers[0].Url)
+				url := strings.NewReplacer("{stock}", stocks[x].Symbol, "{token}", config.Providers[1].Token)
+				formatedUrl = url.Replace(config.Providers[1].Url)
 			}
 
 			// Get the latest stock data

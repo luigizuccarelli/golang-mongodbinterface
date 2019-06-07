@@ -16,7 +16,7 @@ fi
 if [ "$1" = "test" ]
 then
     echo -e "\nExecuting golang unit tests"
-    go test -v config.go config_test.go schema.go handlers.go middleware.go middleware_test.go handlers_test.go -coverprofile tests/results/cover.out
+    go test -v config.go config_test.go schema.go handlers.go handlers_test.go middleware.go middleware_test.go -coverprofile tests/results/cover.out
     go tool cover -html=tests/results/cover.out -o tests/results/cover.html
 fi
 
