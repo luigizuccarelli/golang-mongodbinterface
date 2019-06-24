@@ -92,7 +92,7 @@ type Stock struct {
 
 type Watchlist struct {
 	UID        bson.ObjectId `json:"_id" bson:"_id,omitempty"`
-	CustomerId int           `json:"customerid"`
+	CustomerId string        `json:"customerid"`
 	Stocks     []string      `json:"stocks"`
 }
 

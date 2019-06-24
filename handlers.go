@@ -721,8 +721,7 @@ func (c *Connectors) DBGetWatchlist(id string) (Watchlist, error) {
 	s := c.session.Clone()
 	defer s.Close()
 	collection := s.DB(config.MongoDB.DatabaseName).C(WATCHLIST)
-	customerId, _ := strconv.Atoi(id)
-	query := bson.M{CUSTOMERID: customerId}
+	query := bson.M{CUSTOMERID: id}
 
 	// first find the collection with the given ID
 	err := collection.Find(query).One(&data)

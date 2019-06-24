@@ -210,7 +210,7 @@ func (fq FakeQuery) One(result interface{}) error {
 		*result.(*Stock) = Stock{UID: bson.ObjectIdHex("5cc042307ccc69ada893144c"), PublicationId: 123, AffiliateId: 1, RefId: 1, Symbol: "TST", Name: "TestSymbol", Buy: 2.0, Stop: 1.0, Last: 3.0, Change: 23.0, Recommendation: "Sell", Status: 1}
 	}
 	if reflect.TypeOf(result).String() == "*main.Watchlist" {
-		*result.(*Watchlist) = Watchlist{UID: bson.ObjectIdHex("5cc042307ccc69ada893144c"), CustomerId: 123, Stocks: []string{}}
+		*result.(*Watchlist) = Watchlist{UID: bson.ObjectIdHex("5cc042307ccc69ada893144c"), CustomerId: "123", Stocks: []string{}}
 	}
 	return nil
 }

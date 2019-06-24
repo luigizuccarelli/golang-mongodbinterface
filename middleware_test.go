@@ -179,7 +179,7 @@ func TestAllMiddleware(t *testing.T) {
 			"[MiddlewareDBUpdateWatchlist] should pass",
 			"POST",
 			"api/v1/watchlist",
-			"{\"_id\": \"5cc042307ccc69ada893144c\", \"customerid\":13223,\"stocks\": [\"ABC\",\"DEF\"]}",
+			"{\"_id\": \"5cc042307ccc69ada893144c\", \"customerid\":\"13223\",\"stocks\": [\"ABC\",\"DEF\"]}",
 			"MiddlewareDBUpdateWatchlist",
 			"tests/payload-example.json",
 			http.StatusOK,
