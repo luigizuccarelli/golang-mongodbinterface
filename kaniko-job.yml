@@ -1,0 +1,38 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kaniko-myportfolio-middlewareinterface
+spec:
+  parallelism: 1    
+  completions: 1    
+  template:         
+    metadata:
+      name: kaniko-myportfolio-middlewareinterface
+    spec:
+      containers:
+      - name: kaniko
+        image: gcr.io/kaniko-project/executor:latest
+        args: [
+          "--dockerfile=/godata/pipelines/myportfolio-middlewareinterface/Dockerfile",
+          "--context=/godata/pipelines/myportfolio-middlewareinterface",
+          "--destination=lzuccarelli/myportfolio-middlewareinterface:1.12.5"
+        ]
+        volumeMounts:
+        - mountPath: /godata
+          name: gocdagent-data
+        - mountPath: /kaniko/.docker/config.json
+          name: docker-creds
+          subPath: config.json
+        env:
+        - name: DESITINATION
+          value: lzuccarelli/myportfolio-middlewareinterface:1.12.5
+      restartPolicy: Never   
+      volumes:
+      - name: gocdagent-data
+        persistentVolumeClaim:
+          claimName: gocdagent
+      - name: docker-creds
+        configMap:
+          defaultMode: 420
+          name: configcontent
+      backoffLimit: 1
