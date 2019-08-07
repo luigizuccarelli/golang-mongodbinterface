@@ -9,6 +9,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -44,6 +45,7 @@ const (
 )
 
 var lock = sync.RWMutex{}
+var providers = []string{"alphavantage", "iexcloud"}
 
 func fp(msg string, obj interface{}) string {
 	return fmt.Sprintf(MSGFORMAT, msg, obj)
@@ -65,7 +67,7 @@ func (c *Connectors) DBSetup(b []byte) error {
 	}
 	logger.Debug(fp(DBSETUP+" Inserting data", affiliates))
 	s := c.session.Clone()
-	collection := s.DB(config.MongoDB.DatabaseName).C(AFFILIATES)
+	collection := s.DB(os.Getenv("MONGODB_DATABASE")).C(AFFILIATES)
 	defer s.Close()
 	// convert to []interface{} for array insert
 	var ui []interface{}
@@ -85,8 +87,9 @@ func (c *Connectors) DBSetup(b []byte) error {
 func (c *Connectors) DBIndex() error {
 
 	logger.Trace("DBIndex")
+	database := os.Getenv("MONGODB_DATABASE")
 	s := c.session.Clone()
-	collection := s.DB(config.MongoDB.DatabaseName).C(AFFILIATES)
+	collection := s.DB(database).C(AFFILIATES)
 	index := mgo.Index{
 		Key: []string{"id"},
 	}
@@ -95,7 +98,7 @@ func (c *Connectors) DBIndex() error {
 	if err != nil {
 		return err
 	}
-	collection = s.DB(config.MongoDB.DatabaseName).C(PUBLICATIONS)
+	collection = s.DB(database).C(PUBLICATIONS)
 	index = mgo.Index{
 		Key: []string{"id", AFFILIATEID},
 	}
@@ -103,7 +106,7 @@ func (c *Connectors) DBIndex() error {
 	if err != nil {
 		return err
 	}
-	collection = s.DB(config.MongoDB.DatabaseName).C(STOCKS)
+	collection = s.DB(database).C(STOCKS)
 	index = mgo.Index{
 		Key: []string{"id", PUBLICATIONID, SYMBOL, AFFILIATEID, STATUS},
 	}
@@ -112,7 +115,7 @@ func (c *Connectors) DBIndex() error {
 		return err
 	}
 
-	collection = s.DB(config.MongoDB.DatabaseName).C(WATCHLIST)
+	collection = s.DB(database).C(WATCHLIST)
 	index = mgo.Index{
 		Key: []string{CUSTOMERID},
 	}
@@ -144,10 +147,12 @@ func (c *Connectors) DBMigrate(b []byte) error {
 		return e
 	}
 
+	database := os.Getenv("MONGODB_DATABASE")
+
 	affiliateName := fmt.Sprintf("%s", j[AFFILIATE])
 	// do lookup to get affiliate token on DB
 	s := c.session.Clone()
-	collection := s.DB(config.MongoDB.DatabaseName).C(AFFILIATES)
+	collection := s.DB(database).C(AFFILIATES)
 
 	// find the affiliate info in DB
 	// first find the collection with the given ID
@@ -160,8 +165,9 @@ func (c *Connectors) DBMigrate(b []byte) error {
 	}
 
 	// do the api call to get Publications
-	req, err := http.NewRequest("GET", config.Url+"ApiPortfolio/GetAllPortfolios/?ApiKey="+affiliate.Token, nil)
-	logger.Info(fp("DBMigrate URL info", config.Url+"ApiPortfolio/GetAllPortfolios/?ApiKey="+affiliate.Token))
+	url := os.Getenv("URL")
+	req, err := http.NewRequest("GET", url+"ApiPortfolio/GetAllPortfolios/?ApiKey="+affiliate.Token, nil)
+	logger.Info(fp("DBMigrate URL info", url+"ApiPortfolio/GetAllPortfolios/?ApiKey="+affiliate.Token))
 	resp, err := c.http.Do(req)
 	logger.Info(fmt.Sprintf("Retrieving all publication for affiliate %s %d", affiliate.Name, affiliate.Id))
 	if err != nil || resp.StatusCode != 200 {
@@ -180,8 +186,8 @@ func (c *Connectors) DBMigrate(b []byte) error {
 	for x, _ := range publications {
 		logger.Debug(fmt.Sprintf("Publications info %d", publications[x].Id))
 		publications[x].AffiliateId = affiliate.Id
-		req, err := http.NewRequest("GET", config.Url+"ApiPosition/GetListPositinsByPortfolioId/?ApiKey="+affiliate.Token+"&portfolioid="+strconv.Itoa(publications[x].Id), nil)
-		logger.Debug(fp("DBMigrate URL info", config.Url+"ApiPosition/GetListPositinsByPortfolioId/?ApiKey="+affiliate.Token+"&portfolioid="+strconv.Itoa(publications[x].Id)))
+		req, err := http.NewRequest("GET", url+"ApiPosition/GetListPositinsByPortfolioId/?ApiKey="+affiliate.Token+"&portfolioid="+strconv.Itoa(publications[x].Id), nil)
+		logger.Debug(fp("DBMigrate URL info", url+"ApiPosition/GetListPositinsByPortfolioId/?ApiKey="+affiliate.Token+"&portfolioid="+strconv.Itoa(publications[x].Id)))
 		resp, err := c.http.Do(req)
 		logger.Info(fp("DBMigrate retrieving all stocks for publication", publications[x].Name))
 		if err != nil || resp.StatusCode != 200 {
@@ -210,7 +216,7 @@ func (c *Connectors) DBMigrate(b []byte) error {
 	logger.Trace(fp("DBMigrate publications info", publications))
 	logger.Trace(fp("DBMigrate stocks info", list))
 
-	collection = s.DB(config.MongoDB.DatabaseName).C(PUBLICATIONS)
+	collection = s.DB(database).C(PUBLICATIONS)
 	// store to DB
 	// convert to []interface{} for array insert
 	var ui []interface{}
@@ -223,7 +229,7 @@ func (c *Connectors) DBMigrate(b []byte) error {
 		logger.Error(fp("DBMigrate inserting publications", e.Error()))
 		return e
 	}
-	collection = s.DB(config.MongoDB.DatabaseName).C(STOCKS)
+	collection = s.DB(database).C(STOCKS)
 
 	defer s.Close()
 
@@ -264,10 +270,12 @@ func (c *Connectors) DBUpdateAffiliateSpecific(b []byte) error {
 		return e
 	}
 
+	database := os.Getenv("MONGODB_DATABASE")
+
 	affiliateName := fmt.Sprintf("%s", j[AFFILIATE])
 	// do lookup to get affiliate token on DB
 	s := c.session.Clone()
-	collection := s.DB(config.MongoDB.DatabaseName).C(AFFILIATES)
+	collection := s.DB(database).C(AFFILIATES)
 
 	// find the affiliate info in DB
 	// first find the collection with the given ID
@@ -280,7 +288,7 @@ func (c *Connectors) DBUpdateAffiliateSpecific(b []byte) error {
 	}
 
 	// now get all the Publications
-	collection = s.DB(config.MongoDB.DatabaseName).C(PUBLICATIONS)
+	collection = s.DB(database).C(PUBLICATIONS)
 	// first find the collection with the given ID
 	query = bson.M{AFFILIATEID: affiliate.Id}
 
@@ -302,9 +310,10 @@ func (c *Connectors) DBUpdateAffiliateSpecific(b []byte) error {
 	// the json is transformed into a schema and the relevant stock is updated
 
 	// do the api call to get Publications
+	url := os.Getenv("URL")
 	for x, _ := range publications {
-		req, err := http.NewRequest("GET", config.Url+"ApiPosition/GetAllByPortfolioId/?ApiKey="+affiliate.Token+"&portfolioId="+strconv.Itoa(publications[x].Id), nil)
-		logger.Debug(fp("DBUpdateAffiliateSpecific URL info", config.Url+"ApiPosition/GetAllByPortfolioid/?ApiKey="+affiliate.Token+"&portfolioId="+strconv.Itoa(publications[x].Id)))
+		req, err := http.NewRequest("GET", url+"ApiPosition/GetAllByPortfolioId/?ApiKey="+affiliate.Token+"&portfolioId="+strconv.Itoa(publications[x].Id), nil)
+		logger.Debug(fp("DBUpdateAffiliateSpecific URL info", url+"ApiPosition/GetAllByPortfolioid/?ApiKey="+affiliate.Token+"&portfolioId="+strconv.Itoa(publications[x].Id)))
 		resp, err := c.http.Do(req)
 		logger.Info(fp("DBUpdateAffiliateSpecific retrieving all positions for publication", publications[x].Id))
 		if err != nil || resp.StatusCode != 200 {
@@ -332,7 +341,7 @@ func (c *Connectors) DBUpdateAffiliateSpecific(b []byte) error {
 			} else {
 				if tss[y].Symbol != "" {
 					// now to a lookup to the DB for the symbol
-					st := s.DB(config.MongoDB.DatabaseName).C(STOCKS)
+					st := s.DB(database).C(STOCKS)
 					logger.Trace(fp("DBUpdateAffiliateSpecific looking up stock", tss[y].Symbol))
 					query := bson.M{SYMBOL: tss[y].Symbol}
 					// first find the collection with the given ID
@@ -386,12 +395,14 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error {
 	lock.Lock()
 	defer lock.Unlock()
 
+	database := os.Getenv("MONGODB_DATABASE")
+
 	go func() {
 
 		// do lookup to get affiliate token on DB
 		s := c.session.Clone()
 		defer s.Close()
-		collection := s.DB(config.MongoDB.DatabaseName).C(STOCKS)
+		collection := s.DB(database).C(STOCKS)
 
 		query := bson.M{STATUS: 1}
 		// find the stocks
@@ -411,14 +422,8 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error {
 		// iterate through each stock
 		for x, _ := range stocks {
 
-			switch config.Provider {
-			case "alphavantage":
-				url := strings.NewReplacer("{stock}", stocks[x].Symbol, "{token}", config.Providers[0].Token)
-				formatedUrl = url.Replace(config.Providers[0].Url)
-			case "iexcloud":
-				url := strings.NewReplacer("{stock}", stocks[x].Symbol, "{token}", config.Providers[1].Token)
-				formatedUrl = url.Replace(config.Providers[1].Url)
-			}
+			url := strings.NewReplacer("{stock}", stocks[x].Symbol, "{token}", os.Getenv("PROVIDER_TOKEN"))
+			formatedUrl = url.Replace(os.Getenv("PROVIDER_URL"))
 
 			// Get the latest stock data
 			req, err := http.NewRequest("GET", formatedUrl, nil)
@@ -438,7 +443,7 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error {
 				bErr = true
 			}
 
-			switch config.Provider {
+			switch os.Getenv("PROVIDER_NAME") {
 			case "alphavantage":
 				var stockprice Alphavantage
 				e := json.Unmarshal(body, &stockprice)
@@ -520,8 +525,9 @@ func (c *Connectors) DBUpdateStock(body []byte) ([]Stock, error) {
 	}
 
 	defer s.Close()
+	database := os.Getenv("MONGODB_DATABASE")
 	// collection publications
-	collection := s.DB(config.MongoDB.DatabaseName).C(STOCKS)
+	collection := s.DB(database).C(STOCKS)
 
 	// check the bson id - the payload must include the id - its not taken from the query string
 	f := bson.IsObjectIdHex(data.UID.Hex())
@@ -569,7 +575,7 @@ func (c *Connectors) DBGetAffiliates() ([]Affiliate, error) {
 	// do lookup to get affiliate token on DB
 	s := c.session.Clone()
 	defer s.Close()
-	collection := s.DB(config.MongoDB.DatabaseName).C(AFFILIATES)
+	collection := s.DB(os.Getenv("MONGODB_DATABASE")).C(AFFILIATES)
 	// first find the collection with the given ID
 	iter := collection.Find(nil).Sort("_id").Iter()
 
@@ -600,7 +606,7 @@ func (c *Connectors) DBGetPublications(id string) ([]Publication, error) {
 	// do lookup to get affiliate token on DB
 	s := c.session.Clone()
 	defer s.Close()
-	collection := s.DB(config.MongoDB.DatabaseName).C(PUBLICATIONS)
+	collection := s.DB(os.Getenv("MONGODB_DATABASE")).C(PUBLICATIONS)
 	// first find the collection with the given ID
 	affiliateId, _ := strconv.Atoi(id)
 	query := bson.M{AFFILIATEID: affiliateId}
@@ -636,7 +642,7 @@ func (c *Connectors) DBGetStocks(id string, all bool) ([]Stock, error) {
 	// do lookup to get affiliate token on DB
 	s := c.session.Clone()
 	defer s.Close()
-	collection := s.DB(config.MongoDB.DatabaseName).C(STOCKS)
+	collection := s.DB(os.Getenv("MONGODB_DATABASE")).C(STOCKS)
 	// first find the collection with the given ID
 	if !all {
 		publicationId, _ := strconv.Atoi(id)
@@ -673,7 +679,7 @@ func (c *Connectors) DBGetStocksCount(id string) (int, error) {
 
 	s := c.session.Clone()
 	defer s.Close()
-	collection := s.DB(config.MongoDB.DatabaseName).C(STOCKS)
+	collection := s.DB(os.Getenv("MONGODB_DATABASE")).C(STOCKS)
 	affiliateId, _ := strconv.Atoi(id)
 	query = bson.M{AFFILIATEID: affiliateId, STATUS: 1}
 	result, _ := collection.Find(query).Count()
@@ -690,7 +696,7 @@ func (c *Connectors) DBGetStocksPaginated(id string, skip int, limit int) ([]Sto
 
 	s := c.session.Clone()
 	defer s.Close()
-	collection := s.DB(config.MongoDB.DatabaseName).C(STOCKS)
+	collection := s.DB(os.Getenv("MONGODB_DATABASE")).C(STOCKS)
 	affiliateId, _ := strconv.Atoi(id)
 	query = bson.M{AFFILIATEID: affiliateId, STATUS: 1}
 	iter := collection.Find(query).Sort(SYMBOL).Skip(skip).Limit(limit).Iter()
@@ -720,7 +726,7 @@ func (c *Connectors) DBGetWatchlist(id string) (Watchlist, error) {
 	var data Watchlist
 	s := c.session.Clone()
 	defer s.Close()
-	collection := s.DB(config.MongoDB.DatabaseName).C(WATCHLIST)
+	collection := s.DB(os.Getenv("MONGODB_DATABASE")).C(WATCHLIST)
 	query := bson.M{CUSTOMERID: id}
 
 	// first find the collection with the given ID
@@ -761,7 +767,7 @@ func (c *Connectors) DBUpdateWatchlist(body []byte) (Watchlist, error) {
 
 	defer s.Close()
 	// collection publications
-	collection := s.DB(config.MongoDB.DatabaseName).C("watchlist")
+	collection := s.DB(os.Getenv("MONGODB_DATABASE")).C("watchlist")
 
 	query := bson.M{CUSTOMERID: data.CustomerId}
 

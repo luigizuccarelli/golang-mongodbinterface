@@ -1,16 +1,12 @@
-FROM centos:latest
+FROM registry.access.redhat.com/ubi8/ubi-init:latest
+
 
 # gcc for cgo
-RUN yum install -y git g++ \
-		gcc \
-		libc6-dev \
-		make \
-    telnet \
-	&& rm -rf /var/lib/apt/lists/*
+RUN dnf install -y git gcc make && rm -rf /var/lib/apt/lists/*
 
-ENV GOLANG_VERSION 1.11
+ENV GOLANG_VERSION 1.12.5
 ENV GOLANG_DOWNLOAD_URL https://golang.org/dl/go$GOLANG_VERSION.linux-amd64.tar.gz
-ENV GOLANG_DOWNLOAD_SHA256 b3fcf280ff86558e0559e185b601c9eade0fd24c900b4c63cd14d1d38613e499
+ENV GOLANG_DOWNLOAD_SHA256 aea86e3c73495f205929cfebba0d63f1382c8ac59be081b6351681415f4063cf
 
 RUN curl -fsSL "$GOLANG_DOWNLOAD_URL" -o golang.tar.gz \
 	&& echo "$GOLANG_DOWNLOAD_SHA256  golang.tar.gz" | sha256sum -c - \
@@ -19,10 +15,10 @@ RUN curl -fsSL "$GOLANG_DOWNLOAD_URL" -o golang.tar.gz \
 
 ENV GOPATH /go
 ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
-COPY bin/* /go/
+COPY microservice uid_entrypoint.sh /go/ 
+COPY swaggerui/ /go/swaggerui/
 
 RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 0755 "$GOPATH"
-RUN echo "52.203.102.189 www.alphavantage.co" >> /etc/hosts
 WORKDIR $GOPATH
 
 USER 1001

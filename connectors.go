@@ -6,6 +6,7 @@ import (
 	"github.com/go-redis/redis"
 	"gopkg.in/mgo.v2"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -36,7 +37,7 @@ type Connectors struct {
 	name    string
 }
 
-func NewClientConnectors(cfg Config) Clients {
+func NewClientConnectors() Clients {
 	// set up http object
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -45,11 +46,11 @@ func NewClientConnectors(cfg Config) Clients {
 
 	// mongodb connection
 	mongoDBDialInfo := &mgo.DialInfo{
-		Addrs:    []string{cfg.MongoDB.Host + ":" + cfg.MongoDB.Port},
+		Addrs:    []string{os.Getenv("MONGODB_HOST") + ":" + os.Getenv("MONGODB_PORT")},
 		Timeout:  40 * time.Second,
-		Database: cfg.MongoDB.DatabaseName,
-		Username: cfg.MongoDB.User,
-		Password: cfg.MongoDB.Password,
+		Database: os.Getenv("MONGODB_DATABASE"),
+		Username: os.Getenv("MONGODB_USER"),
+		Password: os.Getenv("MONGODB_PASSWORD"),
 	}
 
 	// database setup and init
@@ -63,13 +64,13 @@ func NewClientConnectors(cfg Config) Clients {
 
 	// connect to redis
 	redisClient := redis.NewClient(&redis.Options{
-		Addr:         cfg.RedisDB.Host + ":" + cfg.RedisDB.Port,
+		Addr:         os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT"),
 		DialTimeout:  10 * time.Second,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
 		PoolSize:     10,
 		PoolTimeout:  30 * time.Second,
-		Password:     cfg.RedisDB.Password,
+		Password:     os.Getenv("REDIS_PASSWORD"),
 		DB:           0,
 	})
 

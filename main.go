@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/microlib/simple"
 	"net/http"
@@ -12,16 +11,12 @@ import (
 
 var (
 	logger     simple.Logger
-	config     Config
 	connectors Clients
 )
 
-func startHttpServer(cfg Config) *http.Server {
+func startHttpServer() *http.Server {
 
-	config = cfg
-
-	logger.Debug(fmt.Sprintf("Config in startServer %v ", cfg))
-	srv := &http.Server{Addr: ":" + cfg.Port}
+	srv := &http.Server{Addr: ":" + os.Getenv("SERVER_PORT")}
 
 	r := mux.NewRouter()
 	r.HandleFunc("/api/v1/sys/info/isalive", IsAlive).Methods("GET")
@@ -39,9 +34,12 @@ func startHttpServer(cfg Config) *http.Server {
 	r.HandleFunc("/api/v1/watchlist/{customerid}", MiddlewareDBUpdateWatchlist).Methods("OPTIONS", "PUT", "POST")
 	r.HandleFunc("/api/v1/prices", MiddlewareDBUpdateStockCurrentPrice).Methods("POST")
 	r.HandleFunc("/api/v1/pricestatus", MiddlewarePriceStatus).Methods("GET")
+
+	sh := http.StripPrefix("/swaggerui/", http.FileServer(http.Dir("./swaggerui/")))
+	r.PathPrefix("/swaggerui/").Handler(sh)
 	http.Handle("/", r)
 
-	connectors = NewClientConnectors(cfg)
+	connectors = NewClientConnectors()
 
 	// lightweight thread of execution
 	go func() {
@@ -54,11 +52,10 @@ func startHttpServer(cfg Config) *http.Server {
 }
 
 func main() {
-	// read the config
-	config, _ := Init("config.json")
-	logger.Level = config.Level
-	srv := startHttpServer(config)
-	logger.Info("Starting server on port " + config.Port)
+	ValidateEnvars()
+	logger.Level = os.Getenv("LOG_LEVEL")
+	srv := startHttpServer()
+	logger.Info("Starting server on port " + os.Getenv("SERVER_PORT"))
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
@@ -89,4 +86,41 @@ func main() {
 	}
 	logger.Info("Server shutdown successfully")
 	os.Exit(code)
+}
+
+func ValidateEnvars() {
+	if os.Getenv("LOG_LEVEL") == "" {
+		os.Setenv("LOG_LEVEL", "info")
+	}
+	if os.Getenv("SERVER_PORT") == "" {
+		os.Setenv("SERVER_PORT", "9000")
+	}
+	if os.Getenv("MONGODB_HOST") == "" {
+		logger.Error("MONGODB_HOST envar is mandatory")
+		os.Exit(-1)
+	}
+	if os.Getenv("MONGODB_DATABASE") == "" {
+		logger.Error("MONGODB_DATABASE envar is mandatory")
+		os.Exit(-1)
+	}
+	if os.Getenv("MONGODB_USER") == "" {
+		logger.Error("MONGODB_USER envar is mandatory")
+		os.Exit(-1)
+	}
+	if os.Getenv("MONGODB_PASSWORD") == "" {
+		logger.Error("MONGODB_PASSWORD envar is mandatory")
+		os.Exit(-1)
+	}
+	if os.Getenv("REDIS_HOST") == "" {
+		logger.Error("MONGODB_HOST envar is mandatory")
+		os.Exit(-1)
+	}
+	if os.Getenv("REDIS_PORT") == "" {
+		logger.Error("REDIS_PORT envar is mandatory")
+		os.Exit(-1)
+	}
+	if os.Getenv("REDIS_PASSWORD") == "" {
+		logger.Error("REDIS_PASSWORD envar is mandatory")
+		os.Exit(-1)
+	}
 }

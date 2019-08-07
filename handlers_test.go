@@ -512,7 +512,6 @@ func TestAll(t *testing.T) {
 			connectors = NewTestClients(tt.FileName, 200)
 			err = connectors.DBUpdateAffiliateSpecific([]byte(tt.Payload))
 		case "DBUpdateStockCurrentPrice":
-			config, _ = Init("config.json")
 			connectors = NewTestClients(tt.FileName, 200)
 			err = connectors.DBUpdateStockCurrentPrice()
 		case "DBUpdateStock":

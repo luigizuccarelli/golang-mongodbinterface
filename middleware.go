@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/mux"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -384,8 +385,7 @@ func MiddlewarePriceStatus(w http.ResponseWriter, r *http.Request) {
 func IsAlive(w http.ResponseWriter, r *http.Request) {
 	addHeaders(w, r)
 	logger.Trace(fmt.Sprintf("used to mask cc %v", r))
-	logger.Trace(fmt.Sprintf("config data  %v", config))
-	fmt.Fprintf(w, "{\"isalive\": true , \"version\": \""+config.Version+"\"}\n")
+	fmt.Fprintf(w, "{\"isalive\": true , \"version\": \""+os.Getenv("VERSION")+"\"}\n")
 }
 
 // simple options handler

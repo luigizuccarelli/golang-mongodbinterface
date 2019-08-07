@@ -3,23 +3,18 @@
 A simple golang microservice with minimal json config. 
 
 
-## Coverage Info
-
-![SonarQube](img/dbinterface-coverage.png) 
-
-
 ## Usage 
 
 ```bash
 # cd to project directory and build executable
-$ go build -o bin/microservice .
+$ go build -o microservice .
 
 ```
 
 ## Docker build
 
 ```bash
-docker build -t <your-registry-id>/portfoliotracker-stocks-dbinterface:1.11.0 .
+docker build -t <your-registry-id>/myportfolio-dbinterface:1.12.5 .
 
 ```
 
@@ -33,7 +28,7 @@ curl -w "@curl-timing.txt" -o /dev/null -s "http://site-to-test
 ```bash
 # clear the cache - this is optional
 go clean -testcache
-GOCACHE=off go test -v config.go config_test.go schema.go handlers.go middleware.go middleware_test.go handlers_test.go -coverprofile tests/results/cover.out
+GOCACHE=off go test -v schema.go handlers.go middleware.go middleware_test.go handlers_test.go -coverprofile tests/results/cover.out
 go tool cover -html=tests/results/cover.out -o tests/results/cover.html
 # run sonarqube scanner (assuming sonarqube server is running)
 # NB the SonarQube host and login will differ - please update it accordingly 
