@@ -1,21 +1,21 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: kaniko-myportfolio-middlewareinterface
+  name: kaniko-myportfolio-dbinterface
 spec:
   parallelism: 1    
   completions: 1    
   template:         
     metadata:
-      name: kaniko-myportfolio-middlewareinterface
+      name: kaniko-myportfolio-dbinterface
     spec:
       containers:
       - name: kaniko
         image: gcr.io/kaniko-project/executor:latest
         args: [
-          "--dockerfile=/godata/pipelines/myportfolio-middlewareinterface/Dockerfile",
-          "--context=/godata/pipelines/myportfolio-middlewareinterface",
-          "--destination=lzuccarelli/myportfolio-middlewareinterface:1.12.5"
+          "--dockerfile=/godata/pipelines/myportfolio-dbinterface/Dockerfile",
+          "--context=/godata/pipelines/myportfolio-dbinterface",
+          "--destination=nexus-registry-nexus.apps.aws2-dev.ocp.14west.io/myportfolio-dbinterface:1.13.1"
         ]
         volumeMounts:
         - mountPath: /godata
@@ -25,7 +25,7 @@ spec:
           subPath: config.json
         env:
         - name: DESITINATION
-          value: lzuccarelli/myportfolio-middlewareinterface:1.12.5
+          value: nexus-registry-nexus.apps.aws2-dev.ocp.14west.io/myportfolio-dbinterface:1.13.1
       restartPolicy: Never   
       volumes:
       - name: gocdagent-data

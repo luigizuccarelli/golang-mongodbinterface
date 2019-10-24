@@ -4,9 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/globalsign/mgo/bson"
 	"github.com/microlib/simple"
-	//"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
 	"net/http"
 	"reflect"
@@ -207,7 +206,7 @@ func (fq FakeQuery) All(result interface{}) error {
 // One fake.
 func (fq FakeQuery) One(result interface{}) error {
 	if reflect.TypeOf(result).String() == "*main.Stock" {
-		*result.(*Stock) = Stock{UID: bson.ObjectIdHex("5cc042307ccc69ada893144c"), PublicationId: 123, AffiliateId: 1, RefId: 1, Symbol: "TST", Name: "TestSymbol", Buy: 2.0, Stop: 1.0, Last: 3.0, Change: 23.0, Recommendation: "Sell", Status: 1}
+		*result.(*Stock) = Stock{UID: bson.ObjectIdHex("5cc042307ccc69ada893144c"), PublicationId: 123, AffiliateId: "SBR-01", RefId: 1, Symbol: "TST", Name: "TestSymbol", Buy: 2.0, Stop: 1.0, Last: 3.0, Change: 23.0, Recommendation: "Sell", Status: 1}
 	}
 	if reflect.TypeOf(result).String() == "*main.Watchlist" {
 		*result.(*Watchlist) = Watchlist{UID: bson.ObjectIdHex("5cc042307ccc69ada893144c"), CustomerId: "123", Stocks: []string{}}
@@ -250,7 +249,7 @@ func (fq FakeQuery) Skip(val int) Query {
 func (fi FakeIter) Next(data interface{}) bool {
 	counter++
 	if reflect.TypeOf(data).String() == "*main.Publication" {
-		*data.(*Publication) = Publication{Id: 1, Name: "Test1", AffiliateId: 1}
+		*data.(*Publication) = Publication{Id: 1, Name: "Test1", AffiliateId: "SBR-01"}
 		if counter > 2 {
 			counter = 0
 			return false
@@ -258,7 +257,7 @@ func (fi FakeIter) Next(data interface{}) bool {
 			return true
 		}
 	} else if reflect.TypeOf(data).String() == "*main.Stock" {
-		*data.(*Stock) = Stock{UID: bson.ObjectIdHex("5cc042307ccc69ada893144c"), PublicationId: 123, AffiliateId: 1, RefId: 1, Symbol: "TST", Name: "TestSymbol", Buy: 2.0, Stop: 1.0, Last: 3.0, Change: 23.0, Recommendation: "Sell", Status: 1}
+		*data.(*Stock) = Stock{UID: bson.ObjectIdHex("5cc042307ccc69ada893144c"), PublicationId: 123, AffiliateId: "SBR-01", RefId: 1, Symbol: "TST", Name: "TestSymbol", Buy: 2.0, Stop: 1.0, Last: 3.0, Change: 23.0, Recommendation: "Sell", Status: 1}
 		if counter > 2 {
 			counter = 0
 			return false
@@ -342,7 +341,7 @@ func TestAll(t *testing.T) {
 	}{
 		{
 			"DBSetup should pass",
-			"[{\"id\": 1, \"name\":\"Test\",\"token\": \"sdasdsafsfdgdfgf\"}]",
+			"[{\"id\": \"SBR-01\", \"name\":\"Test\",\"token\": \"sdasdsafsfdgdfgf\"}]",
 			"DBSetup",
 			"tests/payload-example.json",
 			false,
@@ -358,7 +357,7 @@ func TestAll(t *testing.T) {
 		},
 		{
 			"DBIndex should pass",
-			"[{\"id\": 1, \"name\":\"Test\",\"token\": \"sdasdsafsfdgdfgf\"}]",
+			"[{\"id\": \"SBR-01\", \"name\":\"Test\",\"token\": \"sdasdsafsfdgdfgf\"}]",
 			"DBIndex",
 			"tests/tss.json",
 			false,
@@ -366,7 +365,7 @@ func TestAll(t *testing.T) {
 		},
 		{
 			"DBMigrate should pass",
-			"{\"id\": 1, \"affiliate\":\"Test\"}",
+			"{\"id\": \"SBR-01\", \"affiliate\":\"Test\"}",
 			"DBMigrate",
 			"tests/publication.json",
 			false,
@@ -382,7 +381,7 @@ func TestAll(t *testing.T) {
 		},
 		{
 			"DBUpdateAffiliateSpecific should pass",
-			"{\"id\": 1, \"affiliate\":\"Test\"}",
+			"{\"id\": \"SBR-01\", \"affiliate\":\"Test\"}",
 			"DBUpdateAffiliateSpecific",
 			"tests/tss.json",
 			false,
@@ -398,7 +397,7 @@ func TestAll(t *testing.T) {
 		},
 		{
 			"DBUpdateStockCurrentPrice should pass",
-			"{\"id\": 1, \"affiliate\":\"Test\"}",
+			"{\"id\": \"SBR-01\", \"affiliate\":\"Test\"}",
 			"DBUpdateStockCurrentPrice",
 			"tests/alphavantage.json",
 			false,
@@ -422,7 +421,7 @@ func TestAll(t *testing.T) {
 		},
 		{
 			"DBGetAffiliates should pass",
-			"{\"id\": 1, \"affiliate\":\"Test\"}",
+			"{\"id\": \"SBR-01\", \"affiliate\":\"Test\"}",
 			"DBGetAffiliates",
 			"tests/payload-example.json",
 			false,
@@ -430,7 +429,7 @@ func TestAll(t *testing.T) {
 		},
 		{
 			"DBGetPublications should pass",
-			"{\"id\": 1, \"affiliate\":\"Test\"}",
+			"{\"id\": \"SBR-01\", \"affiliate\":\"Test\"}",
 			"DBGetPublications",
 			"tests/payload-example.json",
 			false,

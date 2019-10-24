@@ -1,18 +1,20 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	mgo "github.com/globalsign/mgo"
+	"github.com/globalsign/mgo/bson"
 	"github.com/imdario/mergo"
-	mgo "gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
+	"text/template"
 	"time"
 )
 
@@ -46,6 +48,21 @@ const (
 
 var lock = sync.RWMutex{}
 var providers = []string{"alphavantage", "iexcloud"}
+var postData = `{
+  "customerId": "{{.CustomerId}}",
+  "id": "user_agent", 
+  "event": "watchlist", 
+  "product": "MyPorfolio", 
+  "action": "update",
+  "timestamp": {{.Timestamp}},
+  "target":{ 
+    "type":"watchlist-update",
+    "value": {
+      "stock": "{{.Stocks}}",
+      "platform":"golang-http/1.12.5 (x86_64-redhat-linux-gnu)" 
+    }
+  }
+}`
 
 func fp(msg string, obj interface{}) string {
 	return fmt.Sprintf(MSGFORMAT, msg, obj)
@@ -76,7 +93,7 @@ func (c *Connectors) DBSetup(b []byte) error {
 	}
 	e = collection.Insert(ui...)
 	if e != nil {
-		logger.Error(fp(DBSETUP+" Inserting data", e.Error()))
+		logger.Error(fp(DBSETUP+" Inserting data", e))
 		return e
 	}
 	return nil
@@ -143,7 +160,7 @@ func (c *Connectors) DBMigrate(b []byte) error {
 
 	e := json.Unmarshal(b, &j)
 	if e != nil {
-		logger.Error(fp(DBMIGRATE, e.Error()))
+		logger.Error(fp(DBMIGRATE, e))
 		return e
 	}
 
@@ -160,7 +177,7 @@ func (c *Connectors) DBMigrate(b []byte) error {
 	e = collection.Find(query).One(&affiliate)
 	logger.Trace(fp(DBMIGRATE+" : affiliate data", affiliate))
 	if e != nil {
-		logger.Error(fp(DBMIGRATE+" : finding affiliate", e.Error()))
+		logger.Error(fp(DBMIGRATE+" : finding affiliate", e))
 		return e
 	}
 
@@ -169,15 +186,15 @@ func (c *Connectors) DBMigrate(b []byte) error {
 	req, err := http.NewRequest("GET", url+"ApiPortfolio/GetAllPortfolios/?ApiKey="+affiliate.Token, nil)
 	logger.Info(fp("DBMigrate URL info", url+"ApiPortfolio/GetAllPortfolios/?ApiKey="+affiliate.Token))
 	resp, err := c.http.Do(req)
-	logger.Info(fmt.Sprintf("Retrieving all publication for affiliate %s %d", affiliate.Name, affiliate.Id))
+	logger.Info(fmt.Sprintf("Retrieving all publication for affiliate %s %s", affiliate.Name, affiliate.Id))
 	if err != nil || resp.StatusCode != 200 {
-		logger.Error(fp(DBMIGRATE, err.Error()))
+		logger.Error(fp(DBMIGRATE, err))
 		return err
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		logger.Error(fp(DBMIGRATE, err.Error()))
+		logger.Error(fp(DBMIGRATE, err))
 		return err
 	}
 
@@ -191,13 +208,13 @@ func (c *Connectors) DBMigrate(b []byte) error {
 		resp, err := c.http.Do(req)
 		logger.Info(fp("DBMigrate retrieving all stocks for publication", publications[x].Name))
 		if err != nil || resp.StatusCode != 200 {
-			logger.Error(fp("DBMigrate retrieving stock info", err.Error()))
+			logger.Error(fp("DBMigrate retrieving stock info", err))
 			return err
 		}
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			logger.Error(fp(DBMIGRATE, err.Error()))
+			logger.Error(fp(DBMIGRATE, err))
 			return err
 		}
 		logger.Debug(fmt.Sprintf("DBMigrate json data from url %s", string(body)))
@@ -240,7 +257,7 @@ func (c *Connectors) DBMigrate(b []byte) error {
 
 	e = collection.Insert(ux...)
 	if e != nil {
-		logger.Error(fp("DBMigrate inserting stocks", e.Error()))
+		logger.Error(fp("DBMigrate inserting stocks", e))
 		return e
 	}
 
@@ -266,7 +283,7 @@ func (c *Connectors) DBUpdateAffiliateSpecific(b []byte) error {
 
 	e := json.Unmarshal(b, &j)
 	if e != nil {
-		logger.Error(fp(DBUPDATEAFFILIATESPECIFIC, e.Error()))
+		logger.Error(fp(DBUPDATEAFFILIATESPECIFIC, e))
 		return e
 	}
 
@@ -283,7 +300,7 @@ func (c *Connectors) DBUpdateAffiliateSpecific(b []byte) error {
 	e = collection.Find(query).One(&affiliate)
 	logger.Trace(fp(DBUPDATEAFFILIATESPECIFIC+" : affiliate data", affiliate))
 	if e != nil {
-		logger.Error(fp(DBUPDATEAFFILIATESPECIFIC, e.Error()))
+		logger.Error(fp(DBUPDATEAFFILIATESPECIFIC, e))
 		return e
 	}
 
@@ -317,20 +334,20 @@ func (c *Connectors) DBUpdateAffiliateSpecific(b []byte) error {
 		resp, err := c.http.Do(req)
 		logger.Info(fp("DBUpdateAffiliateSpecific retrieving all positions for publication", publications[x].Id))
 		if err != nil || resp.StatusCode != 200 {
-			logger.Error(fp(DBUPDATEAFFILIATESPECIFIC, err.Error()))
+			logger.Error(fp(DBUPDATEAFFILIATESPECIFIC, err))
 			return err
 		}
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			logger.Error(fp(DBUPDATEAFFILIATESPECIFIC, err.Error()))
+			logger.Error(fp(DBUPDATEAFFILIATESPECIFIC, err))
 			return err
 		}
 
 		// convert json to schema
 		e := json.Unmarshal(body, &tss)
 		if e != nil {
-			logger.Error(fp(DBUPDATEAFFILIATESPECIFIC, err.Error()))
+			logger.Error(fp(DBUPDATEAFFILIATESPECIFIC, err))
 			return err
 		}
 		logger.Debug(fp(DBUPDATEAFFILIATESPECIFIC+" stock info from TradeSmiths", tss))
@@ -363,7 +380,7 @@ func (c *Connectors) DBUpdateAffiliateSpecific(b []byte) error {
 					logger.Debug(fp(DBUPDATEAFFILIATESPECIFIC+MERGEDDATA, stock))
 					e = st.Update(query, stock)
 					if e != nil {
-						logger.Error(fp(DBUPDATEAFFILIATESPECIFIC+" : updating", err.Error()))
+						logger.Error(fp(DBUPDATEAFFILIATESPECIFIC+" : updating", err))
 						return e
 					}
 					// we keep track odf updated symbols to eliminate duplicates
@@ -432,14 +449,14 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error {
 			logger.Info(fp(DBUPDATESTOCKCURRENTPRICE+"Retrieving stock price for ", stocks[x].Symbol))
 			if err != nil || resp.StatusCode != 200 {
 				// just log the error - this is not a critical error
-				logger.Error(fp(DBUPDATESTOCKCURRENTPRICE, err.Error()))
+				logger.Error(fp(DBUPDATESTOCKCURRENTPRICE, err))
 				bErr = true
 			}
 
 			defer resp.Body.Close()
 			body, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
-				logger.Error(fp(DBUPDATESTOCKCURRENTPRICE, err.Error()))
+				logger.Error(fp(DBUPDATESTOCKCURRENTPRICE, err))
 				bErr = true
 			}
 
@@ -448,7 +465,7 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error {
 				var stockprice Alphavantage
 				e := json.Unmarshal(body, &stockprice)
 				if e != nil {
-					logger.Error(fp(DBUPDATESTOCKCURRENTPRICE, e.Error()))
+					logger.Error(fp(DBUPDATESTOCKCURRENTPRICE, e))
 					bErr = true
 				}
 				logger.Info(fp(DBUPDATESTOCKCURRENTPRICE+"Stock from alphavantage ", stockprice))
@@ -464,7 +481,7 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error {
 				var stockprice IEXCloud
 				e := json.Unmarshal(body, &stockprice)
 				if e != nil {
-					logger.Error(fp(DBUPDATESTOCKCURRENTPRICE, e.Error()))
+					logger.Error(fp(DBUPDATESTOCKCURRENTPRICE, e))
 					bErr = true
 				}
 				logger.Info(fp(DBUPDATESTOCKCURRENTPRICE+"Stock from iexcloud ", stockprice))
@@ -482,7 +499,7 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error {
 			logger.Debug(fp(DBUPDATESTOCKCURRENTPRICE+MERGEDDATA, stocks[x]))
 			e := collection.Update(query, stocks[x])
 			if e != nil {
-				logger.Error(fp(DBUPDATESTOCKCURRENTPRICE+MERGEDDATA, e.Error()))
+				logger.Error(fp(DBUPDATESTOCKCURRENTPRICE+MERGEDDATA, e))
 				bErr = true
 			}
 		}
@@ -511,7 +528,7 @@ func (c *Connectors) DBUpdateStock(body []byte) ([]Stock, error) {
 
 	e := json.Unmarshal(body, &data)
 	if e != nil {
-		logger.Error(fp(DBUPDATESTOCK+" : reading json", e.Error()))
+		logger.Error(fp(DBUPDATESTOCK+" : reading json", e))
 		return stocks, e
 	}
 
@@ -554,7 +571,7 @@ func (c *Connectors) DBUpdateStock(body []byte) ([]Stock, error) {
 	logger.Debug(fp(DBUPDATESTOCK+MERGEDDATA, existing))
 	e = collection.Update(query, existing)
 	if e != nil {
-		logger.Error(fp(DBUPDATESTOCK+MERGEDDATA, e.Error()))
+		logger.Error(fp(DBUPDATESTOCK+MERGEDDATA, e))
 		return stocks, e
 	}
 
@@ -608,8 +625,7 @@ func (c *Connectors) DBGetPublications(id string) ([]Publication, error) {
 	defer s.Close()
 	collection := s.DB(os.Getenv("MONGODB_DATABASE")).C(PUBLICATIONS)
 	// first find the collection with the given ID
-	affiliateId, _ := strconv.Atoi(id)
-	query := bson.M{AFFILIATEID: affiliateId}
+	query := bson.M{AFFILIATEID: id}
 
 	// first find the collection with the given ID
 	iter := collection.Find(query).Sort("name").Iter()
@@ -648,8 +664,7 @@ func (c *Connectors) DBGetStocks(id string, all bool) ([]Stock, error) {
 		publicationId, _ := strconv.Atoi(id)
 		query = bson.M{PUBLICATIONID: publicationId, STATUS: 1}
 	} else {
-		affiliateId, _ := strconv.Atoi(id)
-		query = bson.M{AFFILIATEID: affiliateId, STATUS: 1}
+		query = bson.M{AFFILIATEID: id, STATUS: 1}
 	}
 
 	// first find the collection with the given ID
@@ -680,8 +695,7 @@ func (c *Connectors) DBGetStocksCount(id string) (int, error) {
 	s := c.session.Clone()
 	defer s.Close()
 	collection := s.DB(os.Getenv("MONGODB_DATABASE")).C(STOCKS)
-	affiliateId, _ := strconv.Atoi(id)
-	query = bson.M{AFFILIATEID: affiliateId, STATUS: 1}
+	query = bson.M{AFFILIATEID: id, STATUS: 1}
 	result, _ := collection.Find(query).Count()
 	return result, nil
 }
@@ -697,8 +711,7 @@ func (c *Connectors) DBGetStocksPaginated(id string, skip int, limit int) ([]Sto
 	s := c.session.Clone()
 	defer s.Close()
 	collection := s.DB(os.Getenv("MONGODB_DATABASE")).C(STOCKS)
-	affiliateId, _ := strconv.Atoi(id)
-	query = bson.M{AFFILIATEID: affiliateId, STATUS: 1}
+	query = bson.M{AFFILIATEID: id, STATUS: 1}
 	iter := collection.Find(query).Sort(SYMBOL).Skip(skip).Limit(limit).Iter()
 
 	for iter.Next(&data) {
@@ -733,10 +746,10 @@ func (c *Connectors) DBGetWatchlist(id string) (Watchlist, error) {
 	err := collection.Find(query).One(&data)
 	if err != nil {
 		if strings.Index(err.Error(), "not found") != -1 {
-			logger.Warn(fp(DBWATCHLIST+" "+id, err.Error()))
+			logger.Warn(fp(DBWATCHLIST+" "+id, err))
 			return data, nil
 		} else {
-			logger.Error(fp(DBWATCHLIST+" "+id, err.Error()))
+			logger.Error(fp(DBWATCHLIST+" "+id, err))
 			return data, err
 		}
 	}
@@ -752,7 +765,7 @@ func (c *Connectors) DBUpdateWatchlist(body []byte) (Watchlist, error) {
 
 	e := json.Unmarshal(body, &data)
 	if e != nil {
-		logger.Error(fp(DBWATCHLIST+" : reading json", e.Error()))
+		logger.Error(fp(DBWATCHLIST+" : reading json", e))
 		return data, e
 	}
 
@@ -804,8 +817,31 @@ func (c *Connectors) DBUpdateWatchlist(body []byte) (Watchlist, error) {
 		logger.Debug(fp(DBWATCHLIST+MERGEDDATA, existing))
 		e = collection.Update(query, existing)
 		if e != nil {
-			logger.Error(fp(DBWATCHLIST+MERGEDDATA, e.Error()))
+			logger.Error(fp(DBWATCHLIST+MERGEDDATA, e))
 			return data, e
+		}
+
+		// send the data to anayltics data collector
+		// we ignore errors here if the analytics data push does not work
+		tmpl := template.New("analytics")
+		//parse some content and generate a template
+		tmpl, err := tmpl.Parse(postData)
+		if err != nil {
+			logger.Error(fp("Parse: ", err))
+		} else {
+			var tpl bytes.Buffer
+			pd := PostData{CustomerId: existing.CustomerId, Stocks: existing.Stocks, Timestamp: time.Now().UnixNano()}
+			if err = tmpl.Execute(&tpl, pd); err != nil {
+				logger.Error(fp("Executing template: ", err))
+			} else {
+				req, e := http.NewRequest("POST", os.Getenv("ANALYTICS_URL"), strings.NewReader(tpl.String()))
+				resp, e := c.http.Do(req)
+				defer resp.Body.Close()
+				logger.Debug(fp("Analytics response: ", resp))
+				if e != nil {
+					logger.Error(fp("Analytics data push: ", e))
+				}
+			}
 		}
 	}
 

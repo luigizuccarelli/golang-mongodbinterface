@@ -3,8 +3,8 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
+	"github.com/globalsign/mgo"
 	"github.com/go-redis/redis"
-	"gopkg.in/mgo.v2"
 	"net/http"
 	"os"
 	"time"

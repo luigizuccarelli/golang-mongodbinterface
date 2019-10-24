@@ -1,11 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/microlib/simple"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"syscall"
 )
 
@@ -88,39 +91,40 @@ func main() {
 	os.Exit(code)
 }
 
+func checkEnvar(item string) {
+	name := strings.Split(item, ",")[0]
+	required, _ := strconv.ParseBool(strings.Split(item, ",")[1])
+	if os.Getenv(name) == "" {
+		if required {
+			logger.Error(fmt.Sprintf("%s envar is mandatory please set it", name))
+			os.Exit(-1)
+		} else {
+			logger.Error(fmt.Sprintf("%s envar is empty please set it", name))
+		}
+	}
+}
+
+// ValidateEnvars : public call that groups all envar validations
+// These envars are set via the openshift template
 func ValidateEnvars() {
-	if os.Getenv("LOG_LEVEL") == "" {
-		os.Setenv("LOG_LEVEL", "info")
+	items := []string{
+		"LOG_LEVEL,false",
+		"SERVER_PORT,true",
+		"REDIS_HOST,true",
+		"REDIS_PORT,true",
+		"REDIS_PASSWORD,true",
+		"MONGODB_HOST,true",
+		"MONGODB_DATABASE,true",
+		"MONGODB_USER,true",
+		"MONGODB_PASSWORD,true",
+		"VERSION,true",
+		"URL,true",
+		"PROVIDER_NAME,true",
+		"PROVIDER_URL,true",
+		"PROVIDER_TOKEN,true",
+		"ANALYTICS_URL,true",
 	}
-	if os.Getenv("SERVER_PORT") == "" {
-		os.Setenv("SERVER_PORT", "9000")
-	}
-	if os.Getenv("MONGODB_HOST") == "" {
-		logger.Error("MONGODB_HOST envar is mandatory")
-		os.Exit(-1)
-	}
-	if os.Getenv("MONGODB_DATABASE") == "" {
-		logger.Error("MONGODB_DATABASE envar is mandatory")
-		os.Exit(-1)
-	}
-	if os.Getenv("MONGODB_USER") == "" {
-		logger.Error("MONGODB_USER envar is mandatory")
-		os.Exit(-1)
-	}
-	if os.Getenv("MONGODB_PASSWORD") == "" {
-		logger.Error("MONGODB_PASSWORD envar is mandatory")
-		os.Exit(-1)
-	}
-	if os.Getenv("REDIS_HOST") == "" {
-		logger.Error("MONGODB_HOST envar is mandatory")
-		os.Exit(-1)
-	}
-	if os.Getenv("REDIS_PORT") == "" {
-		logger.Error("REDIS_PORT envar is mandatory")
-		os.Exit(-1)
-	}
-	if os.Getenv("REDIS_PASSWORD") == "" {
-		logger.Error("REDIS_PASSWORD envar is mandatory")
-		os.Exit(-1)
+	for x, _ := range items {
+		checkEnvar(items[x])
 	}
 }

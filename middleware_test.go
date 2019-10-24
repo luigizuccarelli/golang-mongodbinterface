@@ -38,7 +38,7 @@ func TestAllMiddleware(t *testing.T) {
 			"[MiddlewareDBSetup] should pass",
 			"POST",
 			"api/v1/setup",
-			"[{\"id\": 1, \"name\":\"Test\",\"token\": \"sdasdsafsfdgdfgf\"}]",
+			"[{\"id\": \"SBR-01\", \"name\":\"Test\",\"token\": \"sdasdsafsfdgdfgf\"}]",
 			"MiddlewareDBSetup",
 			"tests/payload-example.json",
 			http.StatusOK,
@@ -67,7 +67,7 @@ func TestAllMiddleware(t *testing.T) {
 		{
 			"[MiddlewareDBGetAllAffiliates] should pass",
 			"POST",
-			"api/v1/affiliates/1",
+			"api/v1/affiliates/SBR-01",
 			"{\"username\": \"\",\"password\":\"\"}",
 			"MiddlewareDBGetAllAffiliates",
 			"tests/payload-example.json",
@@ -77,7 +77,7 @@ func TestAllMiddleware(t *testing.T) {
 		{
 			"[MiddlewareDBGetAllPublicationsByAffiliate] should pass",
 			"POST",
-			"api/v1/affiliates/1",
+			"api/v1/affiliates/SBR-01",
 			"{\"affiliateid\": \"\",\"2\":\"\"}",
 			"MiddlewareDBGetAllPublicationsByAffiliate",
 			"tests/payload-example.json",
@@ -241,6 +241,7 @@ func TestAllMiddleware(t *testing.T) {
 			handler.ServeHTTP(rr, req)
 		case "MiddlewareDBGetAllAffiliates":
 			handler := http.HandlerFunc(MiddlewareDBGetAllAffiliates)
+			req.Header.Set("x-api-key", "YXBpa2V5NTYzMjMwNjU0Mw==")
 			handler.ServeHTTP(rr, req)
 		case "MiddlewareDBGetAllPublicationsByAffiliate":
 			handler := http.HandlerFunc(MiddlewareDBGetAllPublicationsByAffiliate)

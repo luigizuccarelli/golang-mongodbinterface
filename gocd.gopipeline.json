@@ -122,7 +122,7 @@
               "command": "go",
               "arguments": [
                 "get",
-                "gopkg.in/mgo.v2"
+                "github.com/globalsign/mgo"
               ],
               "working_directory": null
             },
@@ -218,15 +218,9 @@
             },
             {
               "type": "exec",
-              "command": "/sonarqube/bin/sonar-scanner",
+              "command": "./gocd-cicd.sh",
               "arguments": [
-                "-Dsonar.projectKey=myportfolio-dbinterface",
-                "-Dsonar.sources=.",
-                "-Dsonar.language=go",
-                "-Dsonar.host.url=https://sonarqube-ci-cd.apps.balt1.okd.14west.io",
-                "-Dsonar.login=${SONARQUBE_TOKEN}",
-                "-Dsonar.go.coverage.reportPaths=results/cover.out",
-                "-Dsonar.exclusions=**/*_test.go,**/vendor/**,**/.git/**,**/img/**,**/tests/**,**/results/**,**/bin/**,**/swaggerui/**,main.go,connectors.go,*.xml,*.txt,*.json,*.yml,*.md,Dockerfile"
+                "sonarqube"
               ],
               "working_directory": null
             }
@@ -259,7 +253,10 @@
             },
             {
               "type": "exec",
-              "command": "./build-deploy.sh",
+              "command": "./gocd-cicd.sh",
+              "arguments": [
+                "build-image"
+              ],
               "working_directory": null
             }
           ]

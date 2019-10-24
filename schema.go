@@ -1,7 +1,7 @@
 package main
 
 import (
-	"gopkg.in/mgo.v2/bson"
+	"github.com/globalsign/mgo/bson"
 )
 
 /**
@@ -62,7 +62,7 @@ type SubstradeSetting struct {
 
 type Affiliate struct {
 	UID   bson.ObjectId `json:"_id" bson:"_id,omitempty"`
-	Id    int           `json:"id"`
+	Id    string        `json:"id"`
 	Name  string        `json:"name"`
 	Token string        `json:"token"`
 }
@@ -71,13 +71,13 @@ type Publication struct {
 	UID         bson.ObjectId `json:"_id" bson:"_id,omitempty"`
 	Id          int           `json:"id"`
 	Name        string        `json:"name"`
-	AffiliateId int           `json:"affiliateid"`
+	AffiliateId string        `json:"affiliateid"`
 }
 
 type Stock struct {
 	UID            bson.ObjectId `json:"_id" bson:"_id,omitempty"`
 	PublicationId  int           `json:"publicationid"`
-	AffiliateId    int           `json:"affiliateid"`
+	AffiliateId    string        `json:"affiliateid"`
 	RefId          int           `json:"id"`
 	Symbol         string        `json:"symbol"`
 	Name           string        `json:"name"`
@@ -92,7 +92,7 @@ type Stock struct {
 
 type Watchlist struct {
 	UID        bson.ObjectId `json:"_id" bson:"_id,omitempty"`
-	CustomerId string        `json:"customerid"`
+	CustomerId string        `json:"customerid"` // can either be customernumber or emailadress - lytics uses emaiaddress
 	Stocks     []string      `json:"stocks"`
 }
 
@@ -151,8 +151,8 @@ type IEXCloud struct {
 	ExtendedChangePercent float64     `json:"extendedChangePercent"`
 	ExtendedPriceTime     int64       `json:"extendedPriceTime"`
 	PreviousClose         float64     `json:"previousClose"`
-	Change                int         `json:"change"`
-	ChangePercent         int         `json:"changePercent"`
+	Change                float64     `json:"change"`
+	ChangePercent         float64     `json:"changePercent"`
 	IexMarketPercent      interface{} `json:"iexMarketPercent"`
 	IexVolume             interface{} `json:"iexVolume"`
 	AvgTotalVolume        int         `json:"avgTotalVolume"`
@@ -163,7 +163,7 @@ type IEXCloud struct {
 	MarketCap             int64       `json:"marketCap"`
 	PeRatio               float64     `json:"peRatio"`
 	Week52High            float64     `json:"week52High"`
-	Week52Low             int         `json:"week52Low"`
+	Week52Low             float64     `json:"week52Low"`
 	YtdChange             float64     `json:"ytdChange"`
 }
 
@@ -187,4 +187,11 @@ type Response struct {
 	Status     string          `json:"status"`
 	Message    string          `json:"message"`
 	Payload    SchemaInterface `json:"payload"`
+}
+
+// PostData
+type PostData struct {
+	CustomerId string   `json:"customerid"`
+	Stocks     []string `json:"stocks"`
+	Timestamp  int64    `json:"timestamp"`
 }

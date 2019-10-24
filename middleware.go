@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
@@ -72,12 +73,18 @@ func MiddlewareDBGetAllAffiliates(w http.ResponseWriter, r *http.Request) {
 	addHeaders(w, r)
 	handleOptions(w, r)
 
-	affiliates, err := connectors.DBGetAffiliates()
-	if err != nil {
-		response = handleError(w, "Indexing (MiddlewareDBGetAllAffiliates) "+err.Error(), payload)
+	header := r.Header.Get("x-api-key")
+	decodedKey, _ := base64.StdEncoding.DecodeString(header)
+	if header == "" || string(decodedKey) != "apikey5632306543" {
+		response = handleError(w, "Function (MiddlewareDBGetAllAffiliates) no or incorrect api-key", payload)
 	} else {
-		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database call to affiliates", Affiliates: affiliates}
-		response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBGetAllAffiliates) successfull", Payload: payload}
+		affiliates, err := connectors.DBGetAffiliates()
+		if err != nil {
+			response = handleError(w, "Function (MiddlewareDBGetAllAffiliates) "+err.Error(), payload)
+		} else {
+			payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Database call to affiliates", Affiliates: affiliates}
+			response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareDBGetAllAffiliates) successfull", Payload: payload}
+		}
 	}
 
 	b, _ := json.MarshalIndent(response, "", "	")
@@ -410,7 +417,7 @@ func addHeaders(w http.ResponseWriter, r *http.Request) {
 	for name, headers := range r.Header {
 		name = strings.ToLower(name)
 		for _, h := range headers {
-			request = append(request, fmt.Sprintf("%v: %v", name, h))
+			request = append(request, fmt.Sprintf("%v: %v\n", name, h))
 		}
 	}
 
