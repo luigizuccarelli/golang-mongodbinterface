@@ -24,7 +24,7 @@ var (
 
 type Clients interface {
 	DBGetAffiliates() ([]Affiliate, error)
-	DBGetPublications(string) ([]Publication, error)
+	DBGetPublications(string, []byte) ([]Publication, error)
 	DBGetStocks(string, bool) ([]Stock, error)
 	DBUpdateStock(body []byte) ([]Stock, error)
 	DBIndex() error
@@ -336,8 +336,8 @@ func TestAll(t *testing.T) {
 		Payload  string
 		Handler  string
 		FileName string
-		want     bool
-		errorMsg string
+		Want     bool
+		ErrorMsg string
 	}{
 		{
 			"DBSetup should pass",
@@ -429,7 +429,7 @@ func TestAll(t *testing.T) {
 		},
 		{
 			"DBGetPublications should pass",
-			"{\"id\": \"SBR-01\", \"affiliate\":\"Test\"}",
+			"{\"subs\": {\"ABC:123\", \"XYZ:456\"}}",
 			"DBGetPublications",
 			"tests/payload-example.json",
 			false,
@@ -521,7 +521,7 @@ func TestAll(t *testing.T) {
 			_, err = connectors.DBGetAffiliates()
 		case "DBGetPublications":
 			connectors = NewTestClients(tt.FileName, 200)
-			_, err = connectors.DBGetPublications(tt.Payload)
+			_, err = connectors.DBGetPublications("SBR-01", []byte(tt.Payload))
 		case "DBGetStocks":
 			connectors = NewTestClients(tt.FileName, 200)
 			_, err = connectors.DBGetStocks(tt.Payload, true)
@@ -542,13 +542,13 @@ func TestAll(t *testing.T) {
 			_, err = connectors.DBGetStocksPaginated(tt.Payload, 0, 10)
 		}
 
-		if !tt.want {
+		if !tt.Want {
 			if err != nil {
-				t.Errorf(fmt.Sprintf(tt.errorMsg, tt.Handler, err, nil))
+				t.Errorf(fmt.Sprintf(tt.ErrorMsg, tt.Handler, err, nil))
 			}
 		} else {
 			if err == nil {
-				t.Errorf(fmt.Sprintf(tt.errorMsg, tt.Handler, "nil", "error"))
+				t.Errorf(fmt.Sprintf(tt.ErrorMsg, tt.Handler, "nil", "error"))
 			}
 		}
 	}

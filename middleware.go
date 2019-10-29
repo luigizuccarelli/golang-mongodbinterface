@@ -102,7 +102,14 @@ func MiddlewareDBGetAllPublicationsByAffiliate(w http.ResponseWriter, r *http.Re
 	addHeaders(w, r)
 	handleOptions(w, r)
 
-	publications, err := connectors.DBGetPublications(vars[AFFILIATEID])
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		response = handleError(w, "Could not read body data (MiddlewareDBSetup) "+err.Error(), payload)
+	}
+
+	logger.Trace(fmt.Sprintf("ID and Body contents %s %s\n", vars[AFFILIATEID], string(body)))
+
+	publications, err := connectors.DBGetPublications(vars[AFFILIATEID], body)
 	if err != nil {
 		response = handleError(w, "Indexing (MiddlewareDBGetAllPublicationsByAffiliate) "+err.Error(), payload)
 	} else {

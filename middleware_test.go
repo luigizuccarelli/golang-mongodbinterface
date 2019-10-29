@@ -77,8 +77,8 @@ func TestAllMiddleware(t *testing.T) {
 		{
 			"[MiddlewareDBGetAllPublicationsByAffiliate] should pass",
 			"POST",
-			"api/v1/affiliates/SBR-01",
-			"{\"affiliateid\": \"\",\"2\":\"\"}",
+			"api/v1/publications/SBR-01",
+			"{\"subs\": {\"ABC:123\", \"XYZ:456\"}}",
 			"MiddlewareDBGetAllPublicationsByAffiliate",
 			"tests/payload-example.json",
 			http.StatusOK,

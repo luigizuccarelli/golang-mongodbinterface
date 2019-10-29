@@ -613,22 +613,32 @@ func (c *Connectors) DBGetAffiliates() ([]Affiliate, error) {
 
 // DBGetPublications - get a list of all publications
 // It has a string id parameter (publication id) and returns a publication schema array
-func (c *Connectors) DBGetPublications(id string) ([]Publication, error) {
+func (c *Connectors) DBGetPublications(id string, codes []byte) ([]Publication, error) {
 
 	logger.Trace(DBGETPUBLICATIONS)
 
 	var publications []Publication
 	var data Publication
+	var ids []int
 
 	// do lookup to get affiliate token on DB
 	s := c.session.Clone()
 	defer s.Close()
 	collection := s.DB(os.Getenv("MONGODB_DATABASE")).C(PUBLICATIONS)
-	// first find the collection with the given ID
-	query := bson.M{AFFILIATEID: id}
+	r := strings.NewReplacer("{", "", "}", "", "subs", "", "\"", "")
+	result := r.Replace(string(codes))
+	lists := strings.Split(result[1:], ",")
+	for i, _ := range lists {
+		val, _ := strconv.Atoi(strings.Split(lists[i], ":")[1])
+		ids = append(ids, val)
+	}
 
+	logger.Trace(fmt.Sprintf("ID and list %s %v\n", id, ids))
 	// first find the collection with the given ID
+	query := bson.M{AFFILIATEID: id, "id": bson.M{"$in": ids}}
+
 	iter := collection.Find(query).Sort("name").Iter()
+	logger.Trace(fmt.Sprintf("iter %v\n", iter))
 
 	for iter.Next(&data) {
 		logger.Trace(fp(DBGETPUBLICATIONS+DATA, data))

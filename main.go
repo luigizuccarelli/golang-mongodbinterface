@@ -28,7 +28,7 @@ func startHttpServer() *http.Server {
 	r.HandleFunc("/api/v1/index", MiddlewareDBIndex).Methods("POST")
 	r.HandleFunc("/api/v1/specific", MiddlewareUpdateSpecific).Methods("POST")
 	r.HandleFunc("/api/v1/affiliates", MiddlewareDBGetAllAffiliates).Methods("GET")
-	r.HandleFunc("/api/v1/publications/{affiliateid}", MiddlewareDBGetAllPublicationsByAffiliate).Methods("OPTIONS", "GET")
+	r.HandleFunc("/api/v1/publications/{affiliateid}", MiddlewareDBGetAllPublicationsByAffiliate).Methods("OPTIONS", "POST")
 	r.HandleFunc("/api/v1/stocks/{publicationid}", MiddlewareDBGetStocksByPublication).Methods("OPTIONS", "GET")
 	r.HandleFunc("/api/v1/stocks/affiliate/{affiliateid}", MiddlewareDBGetAllStocksByAffiliatePaginated).Methods("OPTIONS", "GET")
 	r.HandleFunc("/api/v1/stocks/{bsonid}", MiddlewareDBUpdateStock).Methods("OPTIONS", "POST", "PUT")

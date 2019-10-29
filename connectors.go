@@ -12,7 +12,7 @@ import (
 
 type Clients interface {
 	DBGetAffiliates() ([]Affiliate, error)
-	DBGetPublications(string) ([]Publication, error)
+	DBGetPublications(string, []byte) ([]Publication, error)
 	DBGetStocks(string, bool) ([]Stock, error)
 	DBUpdateStock(body []byte) ([]Stock, error)
 	DBIndex() error
