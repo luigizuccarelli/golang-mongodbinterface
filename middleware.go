@@ -16,6 +16,7 @@ import (
 const (
 	CONTENTTYPE     string = "Content-Type"
 	APPLICATIONJSON string = "application/json"
+	OK              string = "OK"
 )
 
 // MiddlewareDBSetup a http response and request wrapper for portfolio's that are associated to affiliate
@@ -71,7 +72,10 @@ func MiddlewareDBGetAllAffiliates(w http.ResponseWriter, r *http.Request) {
 	var payload SchemaInterface
 
 	addHeaders(w, r)
-	handleOptions(w, r)
+	if handleOptions(w, r) {
+		fmt.Fprintf(w, OK)
+		return
+	}
 
 	header := r.Header.Get("x-api-key")
 	decodedKey, _ := base64.StdEncoding.DecodeString(header)
@@ -100,7 +104,10 @@ func MiddlewareDBGetAllPublicationsByAffiliate(w http.ResponseWriter, r *http.Re
 	vars := mux.Vars(r)
 
 	addHeaders(w, r)
-	handleOptions(w, r)
+	if handleOptions(w, r) {
+		fmt.Fprintf(w, OK)
+		return
+	}
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -130,7 +137,10 @@ func MiddlewareDBGetStocksByPublication(w http.ResponseWriter, r *http.Request) 
 	vars := mux.Vars(r)
 
 	addHeaders(w, r)
-	handleOptions(w, r)
+	if handleOptions(w, r) {
+		fmt.Fprintf(w, OK)
+		return
+	}
 
 	stocks, err := connectors.DBGetStocks(vars["publicationid"], false)
 	if err != nil {
@@ -153,7 +163,10 @@ func MiddlewareDBGetAllStocksByAffiliate(w http.ResponseWriter, r *http.Request)
 	vars := mux.Vars(r)
 
 	addHeaders(w, r)
-	handleOptions(w, r)
+	if handleOptions(w, r) {
+		fmt.Fprintf(w, OK)
+		return
+	}
 
 	stocks, err := connectors.DBGetStocks(vars[AFFILIATEID], true)
 	if err != nil {
@@ -176,7 +189,10 @@ func MiddlewareDBGetAllStocksCount(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
 	addHeaders(w, r)
-	handleOptions(w, r)
+	if handleOptions(w, r) {
+		fmt.Fprintf(w, OK)
+		return
+	}
 
 	count, err := connectors.DBGetStocksCount(vars[AFFILIATEID])
 	if err != nil {
@@ -201,7 +217,10 @@ func MiddlewareDBGetAllStocksByAffiliatePaginated(w http.ResponseWriter, r *http
 	vars := mux.Vars(r)
 
 	addHeaders(w, r)
-	handleOptions(w, r)
+	if handleOptions(w, r) {
+		fmt.Fprintf(w, OK)
+		return
+	}
 
 	offset := r.URL.Query().Get("offset")
 	page := r.URL.Query().Get("perpage")
@@ -243,7 +262,10 @@ func MiddlewareMigrateData(w http.ResponseWriter, r *http.Request) {
 	var payload SchemaInterface
 
 	addHeaders(w, r)
-	handleOptions(w, r)
+	if handleOptions(w, r) {
+		fmt.Fprintf(w, OK)
+		return
+	}
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -270,7 +292,10 @@ func MiddlewareUpdateSpecific(w http.ResponseWriter, r *http.Request) {
 	var payload SchemaInterface
 
 	addHeaders(w, r)
-	handleOptions(w, r)
+	if handleOptions(w, r) {
+		fmt.Fprintf(w, OK)
+		return
+	}
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -297,7 +322,10 @@ func MiddlewareDBUpdateStockCurrentPrice(w http.ResponseWriter, r *http.Request)
 	var payload SchemaInterface
 
 	addHeaders(w, r)
-	handleOptions(w, r)
+	if handleOptions(w, r) {
+		fmt.Fprintf(w, OK)
+		return
+	}
 
 	e := connectors.DBUpdateStockCurrentPrice()
 	if e != nil {
@@ -319,7 +347,10 @@ func MiddlewareDBUpdateStock(w http.ResponseWriter, r *http.Request) {
 	var payload SchemaInterface
 
 	addHeaders(w, r)
-	handleOptions(w, r)
+	if handleOptions(w, r) {
+		fmt.Fprintf(w, OK)
+		return
+	}
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -347,7 +378,10 @@ func MiddlewareDBGetWatchlist(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
 	addHeaders(w, r)
-	handleOptions(w, r)
+	if handleOptions(w, r) {
+		fmt.Fprintf(w, OK)
+		return
+	}
 
 	wl, err := connectors.DBGetWatchlist(vars["customerid"])
 	if err != nil {
@@ -369,7 +403,10 @@ func MiddlewareDBUpdateWatchlist(w http.ResponseWriter, r *http.Request) {
 	var payload SchemaInterface
 
 	addHeaders(w, r)
-	handleOptions(w, r)
+	if handleOptions(w, r) {
+		fmt.Fprintf(w, OK)
+		return
+	}
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -403,12 +440,12 @@ func IsAlive(w http.ResponseWriter, r *http.Request) {
 }
 
 // simple options handler
-func handleOptions(w http.ResponseWriter, r *http.Request) {
+func handleOptions(w http.ResponseWriter, r *http.Request) bool {
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "")
+		logger.Trace(fmt.Sprintf("In method handleOptions"))
+		return true
 	}
-	return
+	return false
 }
 
 // simple error handler

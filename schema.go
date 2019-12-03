@@ -72,6 +72,18 @@ type Publication struct {
 	Id          int           `json:"id"`
 	Name        string        `json:"name"`
 	AffiliateId string        `json:"affiliateid"`
+	Code        string        `json:"code"`
+}
+
+type PubCodeHolder struct {
+	Id      int64         `json:"id"`
+	PubCode PubCodeDetail `json:"pubcode"`
+}
+
+type PubCodeDetail struct {
+	Id    int64  `json:"id"`
+	Code  string `json:"pubcode"`
+	Title string `json:"pubtitle"`
 }
 
 type Stock struct {
@@ -103,6 +115,8 @@ type TradeSmithSchema struct {
 	Status         int             `json:"tradestatus"`
 	Recommendation PositionSetting `json:"positionsetting"`
 	CurrencySign   string          `json:"currencysygn"`
+	CurrentPrice   float64         `json:"currentprice"`
+	TotalGain      float64         `json:"totalgain"`
 }
 
 type PositionSetting struct {
@@ -183,6 +197,7 @@ type SchemaInterface struct {
 
 // Response schema
 type Response struct {
+	Code       int             `json:"code,omitempty"`
 	StatusCode string          `json:"statuscode"`
 	Status     string          `json:"status"`
 	Message    string          `json:"message"`

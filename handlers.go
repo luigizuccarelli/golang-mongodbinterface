@@ -117,7 +117,7 @@ func (c *Connectors) DBIndex() error {
 	}
 	collection = s.DB(database).C(PUBLICATIONS)
 	index = mgo.Index{
-		Key: []string{"id", AFFILIATEID},
+		Key: []string{"id", AFFILIATEID, "code"},
 	}
 	err = collection.EnsureIndex(index)
 	if err != nil {
@@ -153,6 +153,7 @@ func (c *Connectors) DBMigrate(b []byte) error {
 
 	var affiliate Affiliate
 	var publications []Publication
+	var pubcode PubCodeHolder
 	var stocks []Stock
 	var list []Stock
 	var keys = make(map[string]bool)
@@ -197,22 +198,41 @@ func (c *Connectors) DBMigrate(b []byte) error {
 		logger.Error(fp(DBMIGRATE, err))
 		return err
 	}
-
 	// convert json to schema
 	json.Unmarshal(body, &publications)
 	for x, _ := range publications {
 		logger.Debug(fmt.Sprintf("Publications info %d", publications[x].Id))
 		publications[x].AffiliateId = affiliate.Id
-		req, err := http.NewRequest("GET", url+"ApiPosition/GetListPositinsByPortfolioId/?ApiKey="+affiliate.Token+"&portfolioid="+strconv.Itoa(publications[x].Id), nil)
-		logger.Debug(fp("DBMigrate URL info", url+"ApiPosition/GetListPositinsByPortfolioId/?ApiKey="+affiliate.Token+"&portfolioid="+strconv.Itoa(publications[x].Id)))
+		// call to get the pubocode for the publication
+		req, err := http.NewRequest("GET", url+"ApiPortfolio/Get?ApiKey="+affiliate.Token+"&id="+strconv.Itoa(publications[x].Id), nil)
+		logger.Debug(fp("DBMigrate URL info", url+"ApiPortfolio/Get?ApiKey="+affiliate.Token+"&id="+strconv.Itoa(publications[x].Id)))
 		resp, err := c.http.Do(req)
+		logger.Info(fp("DBMigrate retrieving the pubcode for publication", publications[x].Name))
+		if err != nil || resp.StatusCode != 200 {
+			logger.Error(fp("DBMigrate retrieving the pubcode for publication", err))
+			return err
+		}
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			logger.Error(fp(DBMIGRATE, err))
+			return err
+		}
+		logger.Debug(fmt.Sprintf("DBMigrate json data from url for pubcode %s\n", string(body)))
+		json.Unmarshal(body, &pubcode)
+		publications[x].Code = pubcode.PubCode.Code
+
+		// now get the stocks for the publication
+		req, err = http.NewRequest("GET", url+"ApiPosition/GetListPositinsByPortfolioId/?ApiKey="+affiliate.Token+"&portfolioid="+strconv.Itoa(publications[x].Id), nil)
+		logger.Debug(fp("DBMigrate URL info", url+"ApiPosition/GetListPositinsByPortfolioId/?ApiKey="+affiliate.Token+"&portfolioid="+strconv.Itoa(publications[x].Id)))
+		resp, err = c.http.Do(req)
 		logger.Info(fp("DBMigrate retrieving all stocks for publication", publications[x].Name))
 		if err != nil || resp.StatusCode != 200 {
 			logger.Error(fp("DBMigrate retrieving stock info", err))
 			return err
 		}
 		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err = ioutil.ReadAll(resp.Body)
 		if err != nil {
 			logger.Error(fp(DBMIGRATE, err))
 			return err
@@ -374,6 +394,8 @@ func (c *Connectors) DBUpdateAffiliateSpecific(b []byte) error {
 					stock.Recommendation = strings.Replace(tss[y].Recommendation.Info, "%", PERCENT, -1)
 					stock.Status = tss[y].Status
 					stock.CurrencySign = tss[y].CurrencySign
+					stock.Change = tss[y].TotalGain
+					stock.Last = tss[y].CurrentPrice
 
 					// update the merged data
 					query = bson.M{"_id": bson.ObjectIdHex(stock.UID.Hex())}
@@ -421,7 +443,9 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error {
 		defer s.Close()
 		collection := s.DB(database).C(STOCKS)
 
-		query := bson.M{STATUS: 1}
+		statuses := []int{0, 1}
+
+		query := bson.M{STATUS: bson.M{"$in": statuses}}
 		// find the stocks
 		iter := collection.Find(query).Sort(SYMBOL).Iter()
 
@@ -471,7 +495,7 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error {
 				logger.Info(fp(DBUPDATESTOCKCURRENTPRICE+"Stock from alphavantage ", stockprice))
 
 				if stockprice == (Alphavantage{}) {
-					stocks[x].Status = -1
+					stocks[x].Status = 0
 				} else {
 					stocks[x].Last, _ = strconv.ParseFloat(stockprice.GlobalQuote.Price, 64)
 					stocks[x].Change, _ = strconv.ParseFloat(stockprice.GlobalQuote.ChangePercent[:len(stockprice.GlobalQuote.ChangePercent)-1], 64)
@@ -487,7 +511,7 @@ func (c *Connectors) DBUpdateStockCurrentPrice() error {
 				logger.Info(fp(DBUPDATESTOCKCURRENTPRICE+"Stock from iexcloud ", stockprice))
 
 				if stockprice == (IEXCloud{}) {
-					stocks[x].Status = -1
+					stocks[x].Status = 0
 				} else {
 					stocks[x].Last = stockprice.LatestPrice
 					stocks[x].Change = float64(stockprice.ChangePercent)
@@ -619,7 +643,7 @@ func (c *Connectors) DBGetPublications(id string, codes []byte) ([]Publication, 
 
 	var publications []Publication
 	var data Publication
-	var ids []int
+	var ids []string
 
 	// do lookup to get affiliate token on DB
 	s := c.session.Clone()
@@ -627,15 +651,20 @@ func (c *Connectors) DBGetPublications(id string, codes []byte) ([]Publication, 
 	collection := s.DB(os.Getenv("MONGODB_DATABASE")).C(PUBLICATIONS)
 	r := strings.NewReplacer("{", "", "}", "", "subs", "", "\"", "")
 	result := r.Replace(string(codes))
+	if len(codes) == 0 || len(result) < 1 {
+		return publications, errors.New("No 'subs' post data")
+	}
 	lists := strings.Split(result[1:], ",")
 	for i, _ := range lists {
-		val, _ := strconv.Atoi(strings.Split(lists[i], ":")[1])
+		// get the pubcode from the jwt
+		val := strings.Split(lists[i], ":")[0]
 		ids = append(ids, val)
 	}
 
 	logger.Trace(fmt.Sprintf("ID and list %s %v\n", id, ids))
 	// first find the collection with the given ID
-	query := bson.M{AFFILIATEID: id, "id": bson.M{"$in": ids}}
+	query := bson.M{AFFILIATEID: id, "code": bson.M{"$in": ids}}
+	// query := bson.M{AFFILIATEID: id, "id": bson.M{"$in": ids}}
 
 	iter := collection.Find(query).Sort("name").Iter()
 	logger.Trace(fmt.Sprintf("iter %v\n", iter))
@@ -670,11 +699,12 @@ func (c *Connectors) DBGetStocks(id string, all bool) ([]Stock, error) {
 	defer s.Close()
 	collection := s.DB(os.Getenv("MONGODB_DATABASE")).C(STOCKS)
 	// first find the collection with the given ID
+	statuses := []int{0, 1}
 	if !all {
 		publicationId, _ := strconv.Atoi(id)
-		query = bson.M{PUBLICATIONID: publicationId, STATUS: 1}
+		query = bson.M{PUBLICATIONID: publicationId, STATUS: bson.M{"$in": statuses}}
 	} else {
-		query = bson.M{AFFILIATEID: id, STATUS: 1}
+		query = bson.M{AFFILIATEID: id, STATUS: bson.M{"$in": statuses}}
 	}
 
 	// first find the collection with the given ID
@@ -705,7 +735,8 @@ func (c *Connectors) DBGetStocksCount(id string) (int, error) {
 	s := c.session.Clone()
 	defer s.Close()
 	collection := s.DB(os.Getenv("MONGODB_DATABASE")).C(STOCKS)
-	query = bson.M{AFFILIATEID: id, STATUS: 1}
+	statuses := []int{0, 1}
+	query = bson.M{AFFILIATEID: id, STATUS: bson.M{"$in": statuses}}
 	result, _ := collection.Find(query).Count()
 	return result, nil
 }
@@ -721,7 +752,8 @@ func (c *Connectors) DBGetStocksPaginated(id string, skip int, limit int) ([]Sto
 	s := c.session.Clone()
 	defer s.Close()
 	collection := s.DB(os.Getenv("MONGODB_DATABASE")).C(STOCKS)
-	query = bson.M{AFFILIATEID: id, STATUS: 1}
+	statuses := []int{0, 1}
+	query = bson.M{AFFILIATEID: id, STATUS: bson.M{"$in": statuses}}
 	iter := collection.Find(query).Sort(SYMBOL).Skip(skip).Limit(limit).Iter()
 
 	for iter.Next(&data) {

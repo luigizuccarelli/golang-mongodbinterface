@@ -1,8 +1,8 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "description": "OpenAPI standard for Portfolio Tracker",
-    "title": "dbservice-api",
+    "description": "OpenAPI standard for MyPortfolio",
+    "title": "myportfolio-dbservice-api",
     "version": "1.0.4",
     "contact": {
       "name": "API Support",
@@ -11,7 +11,24 @@
     }
   },
   "paths": {
-    "/dbservice/api/v1/sys/info/isalive": {
+    "/dbservice/api/v2/api-docs/": {
+      "get": {
+        "summary": "OpenAPI 3.0 online documentation",
+        "responses": {
+          "200": {
+            "description": "Online API Documentation",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dbservice/api/v2/sys/info/isalive": {
       "get": {
         "summary": "Openshift readiness and liveliness probes",
         "responses": {
@@ -32,6 +49,17 @@
       "post": {
         "summary": "Api call that saves affiliate info and initialises the document store",
         "operationId": "dbsetup",
+        "parameters": [
+          {
+            "name": "auth",
+            "in": "header",
+            "description": "authorization header using 'Authorization: Bearer token'",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "description": "Affiliate schema data",
           "required": true,
@@ -57,6 +85,19 @@
               }
             }
           },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "items": {
+                    "$ref": "#/components/schemas/Response"
+                  }
+                }
+              }
+            }
+          },
           "500": {
             "description": "Error response",
             "content": {
@@ -77,6 +118,17 @@
       "post": {
         "summary": "Api endpoint that calls the Tradesmiths API and does a migrate to the document store",
         "operationId": "dbmigrate",
+        "parameters": [
+          {
+            "name": "auth",
+            "in": "header",
+            "description": "authorization header using 'Authorization: Bearer token'",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "description": "Affiliate schema data",
           "required": true,
@@ -95,6 +147,19 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Response"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "items": {
+                    "$ref": "#/components/schemas/Response"
+                  }
                 }
               }
             }
@@ -119,6 +184,17 @@
       "post": {
         "summary": "Api call that indexes the document store for efficient queries",
         "operationId": "dbindex",
+        "parameters": [
+          {
+            "name": "auth",
+            "in": "header",
+            "description": "authorization header using 'Authorization: Bearer token'",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Migrate to the document store database",
@@ -128,6 +204,19 @@
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/Affiliate"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "items": {
+                    "$ref": "#/components/schemas/Response"
                   }
                 }
               }
@@ -150,6 +239,17 @@
       "post": {
         "summary": "Api call that calls the Tradsmiths API and does specific mapping to stock items",
         "operationId": "dbspecific",
+        "parameters": [
+          {
+            "name": "auth",
+            "in": "header",
+            "description": "authorization header using 'Authorization: Bearer token'",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "description": "Stock schema data",
           "required": true,
@@ -168,6 +268,19 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Response"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "items": {
+                    "$ref": "#/components/schemas/Response"
+                  }
                 }
               }
             }
@@ -192,6 +305,26 @@
       "get": {
         "summary": "Api call that gets all affiliates",
         "operationId": "dbgetaffiliates",
+        "parameters": [
+          {
+            "name": "auth",
+            "in": "header",
+            "description": "authorization header using 'Authorization: Bearer token'",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "description": "api-key for access",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Get all affiliates",
@@ -199,6 +332,19 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Response"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "items": {
+                    "$ref": "#/components/schemas/Response"
+                  }
                 }
               }
             }
@@ -220,7 +366,7 @@
       }
     },
     "/dbservice/api/v1/publications/{affiliateid}": {
-      "get": {
+      "post": {
         "summary": "Api call that gets all affiliates",
         "operationId": "dbgetpublications",
         "parameters": [
@@ -228,6 +374,15 @@
             "name": "affiliateid",
             "in": "path",
             "description": "affiliate id (for associated publications)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "auth",
+            "in": "header",
+            "description": "authorization header using 'Authorization: Bearer token'",
             "required": true,
             "schema": {
               "type": "string"
@@ -241,6 +396,19 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Response"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "items": {
+                    "$ref": "#/components/schemas/Response"
+                  }
                 }
               }
             }
@@ -274,6 +442,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "auth",
+            "in": "header",
+            "description": "authorization header using 'Authorization: Bearer token'",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -283,6 +460,19 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Response"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "items": {
+                    "$ref": "#/components/schemas/Response"
+                  }
                 }
               }
             }
@@ -316,6 +506,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "auth",
+            "in": "header",
+            "description": "authorization header using 'Authorization: Bearer token'",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -325,6 +524,19 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Response"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "items": {
+                    "$ref": "#/components/schemas/Response"
+                  }
                 }
               }
             }
@@ -358,6 +570,15 @@
             "schema": {
               "type": "number"
             }
+          },
+          {
+            "name": "auth",
+            "in": "header",
+            "description": "authorization header using 'Authorization: Bearer token'",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -367,6 +588,19 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Response"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "items": {
+                    "$ref": "#/components/schemas/Response"
+                  }
                 }
               }
             }
@@ -387,18 +621,94 @@
         }
       }
     },
-    "/dbservice/api/v1/watchlist/{bsonid}": {
+    "/dbservice/api/v1/watchlist/{emailid}": {
+      "get": {
+        "summary": "Api call that updates the watchlist",
+        "operationId": "dbgetwatchlist",
+        "parameters": [
+          {
+            "name": "emailid",
+            "in": "path",
+            "description": "user's email",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "auth",
+            "in": "header",
+            "description": "authorization header using 'Authorization: Bearer token'",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Update watchlist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "items": {
+                    "$ref": "#/components/schemas/Response"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "items": {
+                    "$ref": "#/components/schemas/Response"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "items": {
+                    "$ref": "#/components/schemas/Response"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dbservice/api/v1/watchlist/{email}": {
       "put": {
         "summary": "Api call that updates the watchlist",
         "operationId": "dbupdatewatchlist",
         "parameters": [
           {
-            "name": "bsonid",
+            "name": "email",
             "in": "path",
-            "description": "bson id (uid object)",
+            "description": "user's email",
             "required": true,
             "schema": {
-              "type": "number"
+              "type": "string"
+            }
+          },
+          {
+            "name": "auth",
+            "in": "header",
+            "description": "authorization header using 'Authorization: Bearer token'",
+            "required": true,
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -413,8 +723,8 @@
               }
             }
           },
-          "500": {
-            "description": "Error response",
+          "403": {
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -422,35 +732,6 @@
                   "items": {
                     "$ref": "#/components/schemas/Response"
                   }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/dbservice/api/v1/watchlist/{customerid}": {
-      "get": {
-        "summary": "Api call that gets a customer's watchlist",
-        "operationId": "dbgetwatchlist",
-        "parameters": [
-          {
-            "name": "customerid",
-            "in": "path",
-            "description": "customer id",
-            "required": true,
-            "schema": {
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Get a watchlist",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Response"
                 }
               }
             }
@@ -475,6 +756,17 @@
       "post": {
         "summary": "Api call that updates the stocks with current prices",
         "operationId": "dbupdatestockcurrentprice",
+        "parameters": [
+          {
+            "name": "auth",
+            "in": "header",
+            "description": "authorization header using 'Authorization: Bearer token'",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Update stocks with current price",
@@ -482,6 +774,19 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Response"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "items": {
+                    "$ref": "#/components/schemas/Response"
+                  }
                 }
               }
             }
@@ -505,7 +810,7 @@
   },
   "servers": [
     {
-      "url": " https://nginx-service-portfoliotracker.e4ff.pro-eu-west-1.openshiftapps.com",
+      "url": "https://nginx-service-myportfolio.apps.aws2-dev.ocp.14west.io",
       "variables": {
         "port": {
           "default": "443"
@@ -670,6 +975,10 @@
       "Response": {
         "type": "object",
         "properties": {
+          "code": {
+            "type": "number",
+            "format": "int64"
+          },
           "statuscode": {
             "type": "string"
           },

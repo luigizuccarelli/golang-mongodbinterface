@@ -22,7 +22,7 @@ func startHttpServer() *http.Server {
 	srv := &http.Server{Addr: ":" + os.Getenv("SERVER_PORT")}
 
 	r := mux.NewRouter()
-	r.HandleFunc("/api/v1/sys/info/isalive", IsAlive).Methods("GET")
+	r.HandleFunc("/api/v2/sys/info/isalive", IsAlive).Methods("GET")
 	r.HandleFunc("/api/v1/migrate", MiddlewareMigrateData).Methods("POST")
 	r.HandleFunc("/api/v1/setup", MiddlewareDBSetup).Methods("POST")
 	r.HandleFunc("/api/v1/index", MiddlewareDBIndex).Methods("POST")
@@ -38,8 +38,8 @@ func startHttpServer() *http.Server {
 	r.HandleFunc("/api/v1/prices", MiddlewareDBUpdateStockCurrentPrice).Methods("POST")
 	r.HandleFunc("/api/v1/pricestatus", MiddlewarePriceStatus).Methods("GET")
 
-	sh := http.StripPrefix("/swaggerui/", http.FileServer(http.Dir("./swaggerui/")))
-	r.PathPrefix("/swaggerui/").Handler(sh)
+	sh := http.StripPrefix("/api/v2/api-docs/", http.FileServer(http.Dir("./swaggerui/")))
+	r.PathPrefix("/api/v2/api-docs/").Handler(sh)
 	http.Handle("/", r)
 
 	connectors = NewClientConnectors()
