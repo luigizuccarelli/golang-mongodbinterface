@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/globalsign/mgo/bson"
-	"github.com/microlib/simple"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 )
@@ -16,7 +17,6 @@ import (
 var (
 	// create a key value map (to fake redis)
 	store      map[string]string
-	logger     simple.Logger
 	config     Config
 	connectors Clients
 	counter    int = 0
@@ -37,6 +37,7 @@ type Clients interface {
 	DBGetStocksCount(string) (int, error)
 	DBGetStocksPaginated(string, int, int) ([]Stock, error)
 	GetPriceStatus() (string, error)
+	SendAlert([]byte) error
 	Get(string) (string, error)
 	Set(string, string, time.Duration) (string, error)
 	Close() error
@@ -292,8 +293,6 @@ func NewHttpTestClient(fn RoundTripFunc) *http.Client {
 
 func NewTestClients(data string, code int) Clients {
 
-	// read the config
-	//config, _ = Init("config.json")
 	logger.Level = "info"
 
 	// initialise our store (cache)
@@ -396,10 +395,18 @@ func TestAll(t *testing.T) {
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 		{
-			"DBUpdateStockCurrentPrice should pass",
+			"DBUpdateStockCurrentPrice alphavantage should pass",
 			"{\"id\": \"SBR-01\", \"affiliate\":\"Test\"}",
-			"DBUpdateStockCurrentPrice",
+			"DBUpdateStockCurrentPriceAlpha",
 			"tests/alphavantage.json",
+			false,
+			"Handler %s returned - got (%v) wanted (%v)",
+		},
+		{
+			"DBUpdateStockCurrentPrice iexcloud should pass",
+			"{\"id\": \"SBR-01\", \"affiliate\":\"Test\"}",
+			"DBUpdateStockCurrentPriceIexcloud",
+			"tests/iexcloud.json",
 			false,
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
@@ -494,6 +501,10 @@ func TestAll(t *testing.T) {
 	}
 
 	var err error
+	var wg sync.WaitGroup
+	wg.Add(1)
+	defer wg.Wait()
+
 	for _, tt := range tests {
 		logger.Info(fmt.Sprintf("Executing test : %s \n", tt.Name))
 		switch tt.Handler {
@@ -510,7 +521,12 @@ func TestAll(t *testing.T) {
 		case "DBUpdateAffiliateSpecific":
 			connectors = NewTestClients(tt.FileName, 200)
 			err = connectors.DBUpdateAffiliateSpecific([]byte(tt.Payload))
-		case "DBUpdateStockCurrentPrice":
+		case "DBUpdateStockCurrentPriceAlpha":
+			os.Setenv("PROVIDER_NAME", "alphavantage")
+			connectors = NewTestClients(tt.FileName, 200)
+			err = connectors.DBUpdateStockCurrentPrice()
+		case "DBUpdateStockCurrentPriceIexcloud":
+			os.Setenv("PROVIDER_NAME", "iexcloud")
 			connectors = NewTestClients(tt.FileName, 200)
 			err = connectors.DBUpdateStockCurrentPrice()
 		case "DBUpdateStock":
@@ -551,5 +567,7 @@ func TestAll(t *testing.T) {
 				t.Errorf(fmt.Sprintf(tt.ErrorMsg, tt.Handler, "nil", "error"))
 			}
 		}
+		fmt.Println("")
 	}
+	wg.Done()
 }

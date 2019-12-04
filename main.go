@@ -55,7 +55,10 @@ func startHttpServer() *http.Server {
 }
 
 func main() {
-	ValidateEnvars()
+	err := ValidateEnvars()
+	if err != nil {
+		os.Exit(-1)
+	}
 	logger.Level = os.Getenv("LOG_LEVEL")
 	srv := startHttpServer()
 	logger.Info("Starting server on port " + os.Getenv("SERVER_PORT"))
@@ -89,42 +92,4 @@ func main() {
 	}
 	logger.Info("Server shutdown successfully")
 	os.Exit(code)
-}
-
-func checkEnvar(item string) {
-	name := strings.Split(item, ",")[0]
-	required, _ := strconv.ParseBool(strings.Split(item, ",")[1])
-	if os.Getenv(name) == "" {
-		if required {
-			logger.Error(fmt.Sprintf("%s envar is mandatory please set it", name))
-			os.Exit(-1)
-		} else {
-			logger.Error(fmt.Sprintf("%s envar is empty please set it", name))
-		}
-	}
-}
-
-// ValidateEnvars : public call that groups all envar validations
-// These envars are set via the openshift template
-func ValidateEnvars() {
-	items := []string{
-		"LOG_LEVEL,false",
-		"SERVER_PORT,true",
-		"REDIS_HOST,true",
-		"REDIS_PORT,true",
-		"REDIS_PASSWORD,true",
-		"MONGODB_HOST,true",
-		"MONGODB_DATABASE,true",
-		"MONGODB_USER,true",
-		"MONGODB_PASSWORD,true",
-		"VERSION,true",
-		"URL,true",
-		"PROVIDER_NAME,true",
-		"PROVIDER_URL,true",
-		"PROVIDER_TOKEN,true",
-		"ANALYTICS_URL,true",
-	}
-	for x, _ := range items {
-		checkEnvar(items[x])
-	}
 }

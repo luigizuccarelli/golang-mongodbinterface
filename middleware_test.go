@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 )
 
@@ -259,6 +260,7 @@ func TestAllMiddleware(t *testing.T) {
 			handler := http.HandlerFunc(MiddlewareUpdateSpecific)
 			handler.ServeHTTP(rr, req)
 		case "MiddlewareDBUpdateStockCurrentPrice":
+			os.Setenv("PROVIDER_NAME", "alphavantage")
 			handler := http.HandlerFunc(MiddlewareDBUpdateStockCurrentPrice)
 			handler.ServeHTTP(rr, req)
 		case "MiddlewareDBUpdateStock":
