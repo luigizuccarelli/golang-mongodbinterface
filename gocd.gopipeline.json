@@ -141,7 +141,7 @@
               "arguments": [
                 "build",
                 "-o",
-                "bin/microservice",
+                "microservice",
                 "."
               ],
               "working_directory": null
