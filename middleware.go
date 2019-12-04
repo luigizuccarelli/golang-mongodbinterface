@@ -292,10 +292,6 @@ func MiddlewareUpdateSpecific(w http.ResponseWriter, r *http.Request) {
 	var payload SchemaInterface
 
 	addHeaders(w, r)
-	if handleOptions(w, r) {
-		fmt.Fprintf(w, OK)
-		return
-	}
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -307,9 +303,11 @@ func MiddlewareUpdateSpecific(w http.ResponseWriter, r *http.Request) {
 		response = handleError(w, "Data specific update (MiddlewareUpdateSpecific) "+err.Error(), payload)
 	} else {
 		payload = SchemaInterface{LastUpdate: time.Now().Unix(), MetaInfo: "Update of affiliate specific data for all associated stocks"}
-		response = Response{StatusCode: "200", Status: "OK", Message: "MW call (MiddlewareUpdateSpecific) successfull", Payload: payload}
+		response = Response{StatusCode: "200", Status: "OK", Message: "Call to (MiddlewareUpdateSpecific) successfull", Payload: payload}
 	}
 
+	msg := "{\"text\":\"" + response.Message + "\"}"
+	connectors.SendAlert([]byte(msg))
 	b, _ := json.MarshalIndent(response, "", "	")
 	fmt.Fprintf(w, string(b))
 }

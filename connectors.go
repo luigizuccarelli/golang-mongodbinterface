@@ -25,6 +25,7 @@ type Clients interface {
 	DBGetStocksCount(id string) (int, error)
 	DBGetStocksPaginated(id string, skip int, limit int) ([]Stock, error)
 	GetPriceStatus() (string, error)
+	SendAlert([]byte) error
 	Get(string) (string, error)
 	Set(string, string, time.Duration) (string, error)
 	Close() error

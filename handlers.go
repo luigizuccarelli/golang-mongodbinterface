@@ -899,3 +899,16 @@ func (c *Connectors) GetPriceStatus() (string, error) {
 	val, _ := c.Get(DBUPDATESTOCKCURRENTPRICE)
 	return val, nil
 }
+
+// Send MyPOrtfolioAlert - via slack
+func (c *Connectors) SendAlert(msg []byte) error {
+	req, err := http.NewRequest("POST", os.Getenv("SLACK_URL"), bytes.NewBuffer(msg))
+	logger.Debug(fp("SendAlert URL info", os.Getenv("SLACK_URL")))
+	resp, err := c.http.Do(req)
+	if err != nil || resp.StatusCode != 200 {
+		logger.Error(fp("SendAlert Failed ", err))
+		return err
+	}
+	logger.Info("SendAlert sent successfully")
+	return nil
+}
