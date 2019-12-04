@@ -187,7 +187,7 @@
                 "middleware.go",
                 "middleware_test.go",
                 "-coverprofile",
-                "results/cover.out"
+                "tests/results/cover.out"
               ],
               "working_directory": null
             }
