@@ -16,7 +16,7 @@
   "materials": [
     {
       "type": "git",
-      "url": "http://${GIT_USER}:${GIT_PASSWORD}@gitea.cicd.svc.cluster.local:3000/cicd/myportfolio-dbinterface.git",
+      "url": "http://cicd:cicd01@gitea.cicd.svc.cluster.local:3000/cicd/myportfolio-dbinterface.git",
       "destination": null,
       "filter": null,
       "name": "scm",
