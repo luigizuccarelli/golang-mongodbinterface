@@ -339,7 +339,7 @@ func TestAll(t *testing.T) {
 		ErrorMsg string
 	}{
 		{
-			"DBSetup should pass",
+			"[TEST] DBSetup should pass",
 			"[{\"id\": \"SBR-01\", \"name\":\"Test\",\"token\": \"sdasdsafsfdgdfgf\"}]",
 			"DBSetup",
 			"tests/payload-example.json",
@@ -347,7 +347,7 @@ func TestAll(t *testing.T) {
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 		{
-			"DBSetup should fail",
+			"[TEST] DBSetup should fail",
 			`[{"test":"]`,
 			"DBSetup",
 			"tests/tss.json",
@@ -355,7 +355,7 @@ func TestAll(t *testing.T) {
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 		{
-			"DBIndex should pass",
+			"[TEST] DBIndex should pass",
 			"[{\"id\": \"SBR-01\", \"name\":\"Test\",\"token\": \"sdasdsafsfdgdfgf\"}]",
 			"DBIndex",
 			"tests/tss.json",
@@ -363,7 +363,7 @@ func TestAll(t *testing.T) {
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 		{
-			"DBMigrate should pass",
+			"[TEST] DBMigrate should pass",
 			"{\"id\": \"SBR-01\", \"affiliate\":\"Test\"}",
 			"DBMigrate",
 			"tests/publication.json",
@@ -371,7 +371,7 @@ func TestAll(t *testing.T) {
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 		{
-			"DBMigrate should fail",
+			"[TEST] DBMigrate should fail",
 			`{"test":"`,
 			"DBMigrate",
 			"tests/publication.json",
@@ -379,7 +379,7 @@ func TestAll(t *testing.T) {
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 		{
-			"DBUpdateAffiliateSpecific should pass",
+			"[TEST] DBUpdateAffiliateSpecific should pass",
 			"{\"id\": \"SBR-01\", \"affiliate\":\"Test\"}",
 			"DBUpdateAffiliateSpecific",
 			"tests/tss.json",
@@ -387,7 +387,7 @@ func TestAll(t *testing.T) {
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 		{
-			"DBUpdateAffiliateSpecific should fail",
+			"[TEST] DBUpdateAffiliateSpecific should fail",
 			`{"test":"`,
 			"DBUpdateAffiliateSpecific",
 			"tests/alphavantage.json",
@@ -395,7 +395,7 @@ func TestAll(t *testing.T) {
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 		{
-			"DBUpdateStockCurrentPrice alphavantage should pass",
+			"[TEST] DBUpdateStockCurrentPrice alphavantage should pass",
 			"{\"id\": \"SBR-01\", \"affiliate\":\"Test\"}",
 			"DBUpdateStockCurrentPriceAlpha",
 			"tests/alphavantage.json",
@@ -403,7 +403,7 @@ func TestAll(t *testing.T) {
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 		{
-			"DBUpdateStockCurrentPrice iexcloud should pass",
+			"[TEST] DBUpdateStockCurrentPrice iexcloud should pass",
 			"{\"id\": \"SBR-01\", \"affiliate\":\"Test\"}",
 			"DBUpdateStockCurrentPriceIexcloud",
 			"tests/iexcloud.json",
@@ -411,7 +411,7 @@ func TestAll(t *testing.T) {
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 		{
-			"DBUpdateStock should pass",
+			"[TEST] DBUpdateStock should pass",
 			"{\"_id\": \"5cc042307ccc69ada893144c\"}",
 			"DBUpdateStock",
 			"tests/tss.json",
@@ -419,7 +419,7 @@ func TestAll(t *testing.T) {
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 		{
-			"DBUpdateStock should fail",
+			"[TEST] DBUpdateStock should fail",
 			`{"test":"`,
 			"DBUpdateStock",
 			"tests/tss.json",
@@ -427,7 +427,7 @@ func TestAll(t *testing.T) {
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 		{
-			"DBGetAffiliates should pass",
+			"[TEST] DBGetAffiliates should pass",
 			"{\"id\": \"SBR-01\", \"affiliate\":\"Test\"}",
 			"DBGetAffiliates",
 			"tests/payload-example.json",
@@ -435,7 +435,7 @@ func TestAll(t *testing.T) {
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 		{
-			"DBGetPublications should pass",
+			"[TEST] DBGetPublications should pass",
 			"{\"subs\": {\"ABC:123\", \"XYZ:456\"}}",
 			"DBGetPublications",
 			"tests/payload-example.json",
@@ -443,7 +443,7 @@ func TestAll(t *testing.T) {
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 		{
-			"DBGetStocks should pass",
+			"[TEST] DBGetStocks should pass",
 			"5cc042307ccc69ada893144c",
 			"DBGetStocks",
 			"tests/payload-example.json",
@@ -451,7 +451,7 @@ func TestAll(t *testing.T) {
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 		{
-			"DBGetStocks should pass",
+			"[TEST] DBGetStocks should pass",
 			"0",
 			"DBGetStocks",
 			"tests/payload-example.json",
@@ -459,7 +459,7 @@ func TestAll(t *testing.T) {
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 		{
-			"DBUpdateWatchlist should pass",
+			"[TEST] DBUpdateWatchlist should pass",
 			"{\"_id\": \"5cc042307ccc69ada893144c\", \"affiliate\":\"Test\"}",
 			"DBUpdateWatchlist",
 			"tests/publication.json",
@@ -467,7 +467,7 @@ func TestAll(t *testing.T) {
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 		{
-			"DBGetWatchlist should pass",
+			"[TEST] DBGetWatchlist should pass",
 			"1",
 			"DBGetWatchlist",
 			"tests/payload-example.json",
@@ -475,7 +475,7 @@ func TestAll(t *testing.T) {
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 		{
-			"GetPriceStatus should pass",
+			"[TEST] GetPriceStatus should pass",
 			"",
 			"GetPriceStatus",
 			"tests/publication.json",
@@ -483,7 +483,7 @@ func TestAll(t *testing.T) {
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 		{
-			"DBGetStocksCount should pass",
+			"[TEST] DBGetStocksCount should pass",
 			"1",
 			"DBGetStocksCount",
 			"tests/publication.json",
@@ -491,7 +491,7 @@ func TestAll(t *testing.T) {
 			"Handler %s returned - got (%v) wanted (%v)",
 		},
 		{
-			"DBGetStocksPaginated should pass",
+			"[TEST] DBGetStocksPaginated should pass",
 			"1",
 			"DBGetStocksPaginated",
 			"tests/publication.json",
