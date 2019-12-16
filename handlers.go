@@ -396,6 +396,7 @@ func (c *Connectors) DBUpdateAffiliateSpecific(b []byte) error {
 				stock.CurrencySign = tss[y].CurrencySign
 				stock.Change = tss[y].TotalGain
 				stock.Last = tss[y].CurrentPrice
+				stock.ClosedDate = tss[y].ClosedDate
 
 				// update the merged data
 				query = bson.M{"_id": bson.ObjectIdHex(stock.UID.Hex())}

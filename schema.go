@@ -100,6 +100,7 @@ type Stock struct {
 	Recommendation string        `json:"recommendation"`
 	Status         int           `json:"status"`
 	CurrencySign   string        `json:"currencysign"`
+	ClosedDate     string        `json:"closeddate"`
 }
 
 type Watchlist struct {
@@ -117,6 +118,7 @@ type TradeSmithSchema struct {
 	CurrencySign   string          `json:"currencysygn"`
 	CurrentPrice   float64         `json:"currentprice"`
 	TotalGain      float64         `json:"totalgain"`
+	ClosedDate     string          `json:"lastupdateclosestatus"`
 }
 
 type PositionSetting struct {
