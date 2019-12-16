@@ -753,7 +753,7 @@ func (c *Connectors) DBGetStocksPaginated(id string, skip int, limit int) ([]Sto
 	s := c.session.Clone()
 	defer s.Close()
 	collection := s.DB(os.Getenv("MONGODB_DATABASE")).C(STOCKS)
-	statuses := []int{0, 1}
+	statuses := []int{0, 1, 2}
 	query = bson.M{AFFILIATEID: id, STATUS: bson.M{"$in": statuses}}
 	iter := collection.Find(query).Sort(SYMBOL).Skip(skip).Limit(limit).Iter()
 
