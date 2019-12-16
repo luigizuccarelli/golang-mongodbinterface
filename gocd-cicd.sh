@@ -3,7 +3,7 @@
 # All parameter fields are required for the script to execute
 
 # declare some variables
-project="myportfolio-dbinterface"
+PROJECT="myportfolio-dbinterface"
 jobname="kaniko-myportfolio-dbinterface"
 deploymentconfig="dbinterface.json"
 namespace="myportfolio"
