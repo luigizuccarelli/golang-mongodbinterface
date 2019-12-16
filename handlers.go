@@ -373,43 +373,43 @@ func (c *Connectors) DBUpdateAffiliateSpecific(b []byte) error {
 		logger.Debug(fp(DBUPDATEAFFILIATESPECIFIC+" stock info from TradeSmiths", tss))
 
 		for y, _ := range tss {
-			if keys[tss[y].Symbol] {
-				logger.Info(fp(DBUPDATEAFFILIATESPECIFIC+" duplicate stock found no updates will be made", tss[y].Symbol))
-			} else {
-				if tss[y].Symbol != "" {
-					// now to a lookup to the DB for the symbol
-					st := s.DB(database).C(STOCKS)
-					logger.Trace(fp("DBUpdateAffiliateSpecific looking up stock", tss[y].Symbol))
-					query := bson.M{SYMBOL: tss[y].Symbol}
-					// first find the collection with the given ID
-					err := st.Find(query).One(&stock)
-					if err != nil {
-						return err
-					}
-					logger.Info(fp(DBUPDATEAFFILIATESPECIFIC+" Stocks ", stock))
-					// update the fields we are interested in
-					stock.Buy = tss[y].Buy
-					stock.Stop = tss[y].SubTrades[0].SubstradeSetting.Stop
-					// golang does not like % in a string - some cleanup is needed
-					stock.Recommendation = strings.Replace(tss[y].Recommendation.Info, "%", PERCENT, -1)
-					stock.Status = tss[y].Status
-					stock.CurrencySign = tss[y].CurrencySign
-					stock.Change = tss[y].TotalGain
-					stock.Last = tss[y].CurrentPrice
-
-					// update the merged data
-					query = bson.M{"_id": bson.ObjectIdHex(stock.UID.Hex())}
-					logger.Debug(fp(DBUPDATEAFFILIATESPECIFIC+MERGEDDATA, stock))
-					e = st.Update(query, stock)
-					if e != nil {
-						logger.Error(fp(DBUPDATEAFFILIATESPECIFIC+" : updating", err))
-						return e
-					}
-					// we keep track odf updated symbols to eliminate duplicates
-					keys[stock.Symbol] = true
-				} else {
-					logger.Error(fp(DBUPDATEAFFILIATESPECIFIC, "Empty stock symbol - please verfiy the tradesmiths api"))
+			//if keys[tss[y].Symbol] {
+			//	logger.Info(fp(DBUPDATEAFFILIATESPECIFIC+" duplicate stock found no updates will be made", tss[y].Symbol))
+			//} else {
+			if tss[y].Symbol != "" {
+				// now to a lookup to the DB for the symbol
+				st := s.DB(database).C(STOCKS)
+				logger.Trace(fp("DBUpdateAffiliateSpecific looking up stock", tss[y].Symbol))
+				query := bson.M{SYMBOL: tss[y].Symbol}
+				// first find the collection with the given ID
+				err := st.Find(query).One(&stock)
+				if err != nil {
+					return err
 				}
+				logger.Info(fp(DBUPDATEAFFILIATESPECIFIC+" Stocks ", stock))
+				// update the fields we are interested in
+				stock.Buy = tss[y].Buy
+				stock.Stop = tss[y].SubTrades[0].SubstradeSetting.Stop
+				// golang does not like % in a string - some cleanup is needed
+				stock.Recommendation = strings.Replace(tss[y].Recommendation.Info, "%", PERCENT, -1)
+				stock.Status = tss[y].Status
+				stock.CurrencySign = tss[y].CurrencySign
+				stock.Change = tss[y].TotalGain
+				stock.Last = tss[y].CurrentPrice
+
+				// update the merged data
+				query = bson.M{"_id": bson.ObjectIdHex(stock.UID.Hex())}
+				logger.Debug(fp(DBUPDATEAFFILIATESPECIFIC+MERGEDDATA, stock))
+				e = st.Update(query, stock)
+				if e != nil {
+					logger.Error(fp(DBUPDATEAFFILIATESPECIFIC+" : updating", err))
+					return e
+				}
+				// we keep track odf updated symbols to eliminate duplicates
+				keys[stock.Symbol] = true
+				//} else {
+				//	logger.Error(fp(DBUPDATEAFFILIATESPECIFIC, "Empty stock symbol - please verfiy the tradesmiths api"))
+				//}
 			}
 		}
 	}
@@ -699,7 +699,7 @@ func (c *Connectors) DBGetStocks(id string, all bool) ([]Stock, error) {
 	defer s.Close()
 	collection := s.DB(os.Getenv("MONGODB_DATABASE")).C(STOCKS)
 	// first find the collection with the given ID
-	statuses := []int{0, 1}
+	statuses := []int{0, 1, 2}
 	if !all {
 		publicationId, _ := strconv.Atoi(id)
 		query = bson.M{PUBLICATIONID: publicationId, STATUS: bson.M{"$in": statuses}}
