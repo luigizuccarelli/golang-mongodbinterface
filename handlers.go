@@ -242,6 +242,13 @@ func (c *Connectors) DBMigrate(b []byte) error {
 		for y, _ := range stocks {
 			stocks[y].PublicationId = publications[x].Id
 			stocks[y].AffiliateId = affiliate.Id
+			// TODO This is not ideal as it only deals with LSX
+			// we should add a more generic service
+			if strings.Index(stocks[y].Symbol, "-L") > 0 {
+				stocks[y].Alias = stocks[y].Symbol + "N"
+			} else {
+				stocks[y].Alias = stocks[y].Symbol
+			}
 			// check for duplicates , dont add to list if it exists
 			if _, value := keys[stocks[y].Symbol]; !value {
 				keys[stocks[y].Symbol] = true

@@ -28,7 +28,7 @@ curl -w "@curl-timing.txt" -o /dev/null -s "http://site-to-test
 ```bash
 # clear the cache - this is optional
 go clean -testcache
-go test -v schema.go handlers.go middleware.go middleware_test.go handlers_test.go -coverprofile tests/results/cover.out
+go test -v schema.go validate.go validate_test.go handlers.go handlers_test.go middleware.go middleware_test.go -coverprofile tests/results/cover.out
 go tool cover -html=tests/results/cover.out -o tests/results/cover.html
 # run sonarqube scanner (assuming sonarqube server is running)
 # NB the SonarQube host and login will differ - please update it accordingly 

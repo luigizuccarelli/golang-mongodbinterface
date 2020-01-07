@@ -92,6 +92,7 @@ type Stock struct {
 	AffiliateId    string        `json:"affiliateid"`
 	RefId          int           `json:"id"`
 	Symbol         string        `json:"symbol"`
+	Alias          string        `json:"alias"`
 	Name           string        `json:"name"`
 	Buy            float64       `json:"buy"`
 	Stop           float64       `json:"stop"`
