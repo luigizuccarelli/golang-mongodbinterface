@@ -1,4 +1,4 @@
-package main
+package validator
 
 import (
 	"errors"
@@ -6,10 +6,12 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/microlib/simple"
 )
 
 // checkEnvars - private function, iterates through each item and checks the required field
-func checkEnvar(item string) error {
+func checkEnvar(logger *simple.Logger, item string) error {
 	name := strings.Split(item, ",")[0]
 	required, _ := strconv.ParseBool(strings.Split(item, ",")[1])
 	logger.Trace(fmt.Sprintf("name %s : required %t", name, required))
@@ -27,7 +29,7 @@ func checkEnvar(item string) error {
 // ValidateEnvars : public call that groups all envar validations
 // These envars are set via the openshift template
 // Each microservice will obviously have a diffefrent envars so change where needed
-func ValidateEnvars() error {
+func ValidateEnvars(logger *simple.Logger) error {
 	items := []string{
 		"LOG_LEVEL,false",
 		"SERVER_PORT,true",
@@ -39,14 +41,9 @@ func ValidateEnvars() error {
 		"MONGODB_USER,true",
 		"MONGODB_PASSWORD,true",
 		"VERSION,true",
-		"URL,true",
-		"PROVIDER_NAME,true",
-		"PROVIDER_URL,true",
-		"PROVIDER_TOKEN,true",
-		"ANALYTICS_URL,true",
 	}
 	for x, _ := range items {
-		if err := checkEnvar(items[x]); err != nil {
+		if err := checkEnvar(logger, items[x]); err != nil {
 			return err
 		}
 	}

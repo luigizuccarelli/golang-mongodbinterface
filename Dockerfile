@@ -16,7 +16,7 @@ RUN curl -fsSL "$GOLANG_DOWNLOAD_URL" -o golang.tar.gz \
 
 ENV GOPATH /go
 ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
-COPY microservice uid_entrypoint.sh /go/ 
+COPY build/microservice uid_entrypoint.sh /go/ 
 COPY swaggerui/ /go/swaggerui/
 
 RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 0755 "$GOPATH"

@@ -40,6 +40,9 @@ go tool cover -html=tests/results/cover.out -o tests/results/cover.html
 
 # start the container
 # curl the isalive endpoint
-curl -k -H 'Token: xxxxx' -w '@curl-timing.txt'  http://127.0.0.1:9000/api/v1/sys/info/isalive
+curl -k -H 'Token: xxxxx' -w '@curl-timing.txt'  http://127.0.0.1:9000/api/v2/sys/info/isalive
+
+# insert data
+curl -d'{"metainfo":"test","custom":{"name":"test","surname":"test","email":"test" }}' http://dbservicetest:9000/api/v1/object/
 
 ```

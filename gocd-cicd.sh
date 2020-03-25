@@ -30,10 +30,13 @@ fi
 
 # list some gocd variables
 echo -e " "
-echo "GOCD job name         ${GO_JOB_NAME}"
-echo "GOCD pipeline name    ${GO_PIPELINE_NAME}"
-echo "GOCD pipeline counter ${GO_PIPELINE_COUNTER}"
-echo "GOCD pipeline label   ${GO_PIPELINE_LABEL}"
+echo "GOCD job name          ${GO_JOB_NAME}"
+echo "GOCD pipeline name     ${GO_PIPELINE_NAME}"
+echo "GOCD pipeline counter  ${GO_PIPELINE_COUNTER}"
+echo "GOCD pipeline label    ${GO_PIPELINE_LABEL}"
+echo "GOCD Project           ${PROJECT}"
+echo "GOCD Sonarqube host    ${SONARQUBE_HOST}"
+echo "GOCD Sonarqube scanner ${SONARQUBE_SCANNER_PATH}"
 echo -e " " 
 
 if [ "$1" = "sonarqube" ]
@@ -45,7 +48,7 @@ then
    result="\"PENDING\""
    ${SONARQUBE_SCANNER_PATH}bin/sonar-scanner -Dsonar.projectKey=${PROJECT} -Dsonar.sources=. -Dsonar.host.url=${SONARQUBE_HOST} -Dsonar.login=${SONARQUBE_USER} -Dsonar.password=${SONARQUBE_PASSWORD} -Dsonar.go.coverage.reportPaths=tests/results/cover.out -Dsonar.exclusions=vendor/**,*_test.go,main.go,connectors.go,schema.go,swaggerui/**,tests/**,*.json,*.txt,*.yml,*.xml,*.sh,Dockerfile -Dsonar.issuesReport.json.enable=true -Dsonar.report.export.path=sonar-report.json -Dsonar.issuesReport.console.enable=true | tee response.txt
    # response text includes the url to view the json payload of the sonar scanner results
-   url=$(cat response.txt | grep -o "${SONARQUBE_HOST}/api/ce/task?id=[A-Za-z0-9\-\_]*")
+   url=$(cat response.txt | grep -o "${SONARQUBE_HOST}/api/ce/task?id=[-_A-Za-z0-9]*")
    # loop until we have a valid payload
    while [[ ${fs} -eq 0 ]] && [[ "${result}" = "\"PENDING\"" ]];
    do
