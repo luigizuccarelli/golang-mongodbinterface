@@ -1,5 +1,5 @@
 {
-  "repo": "Golang MongoDB Interface",
+  "project": "Golang MongoDB Interface",
   "metainfo": "Author LMZ 03/2020",
   "workdir": "work",
   "scm": "git@github.com:luigizuccarelli/golang-mongodbinterface.git",
