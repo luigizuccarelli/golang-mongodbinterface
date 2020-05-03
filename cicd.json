@@ -2,6 +2,7 @@
   "project": "Golang MongoDB Interface",
   "metainfo": "Author LMZ 03/2020",
   "workdir": "work",
+  "id": "1001",
   "scm": "git@github.com:luigizuccarelli/golang-mongodbinterface.git",
   "stages": [
     {
