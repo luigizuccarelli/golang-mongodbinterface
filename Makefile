@@ -13,4 +13,11 @@ cover:
 	go tool cover -html=tests/results/cover.out -o tests/results/cover.html
 
 clean:
+	rm -rf build/microservice 
 	go clean ./...
+
+image:
+	podman build -t docker.io/lzuccarelli/golang-mongodbinterface:1.13.1 .
+
+push:
+	podman push docker.io/lzuccarelli/golang-mongodbinterface:1.13.1
